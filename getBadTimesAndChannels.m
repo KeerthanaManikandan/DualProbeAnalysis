@@ -1,4 +1,4 @@
-function [allBadTimes,badElecA,badElecB] = getBadTimesAndChannels(monkeyName, allDates, datFileNumAll,probe1,probe2,chInCortexProbeA,chInCortexProbeB,probeLabelA,probeLabelB,saveFigureFlag)
+function [allBadTimes,badElecA,badElecB] = getBadTimesAndChannels(monkeyName, allDates, datFileNumAll,allProbeData,chInCortexProbeA,chInCortexProbeB,probeLabelA,probeLabelB,saveFigureFlag)
 % This function finds and removes the bad time segments and bad channels
 % and also outputs the spectrograms (mean and median across channels)
 % Update log:
@@ -11,29 +11,35 @@ params.fpass    = [1 120];
 params.pad      = -1;
 params.tapers   = [3 5];
 params.trialave = 0;
+
 hemisphere      = 'Left';
 chOutCortex     = 1:3;
 chDeep          = 30:32;
-gammaBand      = [30 90]; [zG,pG,kG] = butter(3,gammaBand./(fs/2),'bandpass'); [sosG,gG] = zp2sos(zG,pG,kG);
-alphaBand      = [8 12];  [zA,pA,kA] = butter(3,alphaBand./(fs/2),'bandpass'); [sosA,gA] = zp2sos(zA,pA,kA);
 
-for iDate = 1:size(allDates,1)
+gammaBand      = [30 90]; [bG,aG] = butter(3,gammaBand./(fs/2),'bandpass'); % Gamma band filtering parameters
+alphaBand      = [8 12];  [bA,aA] = butter(3,alphaBand./(fs/2),'bandpass'); % Alpha band filtering parameters
+
+for iDate = 1:size(allDates,1) % All experiments
     clc; clear expdate datFileNum datFileName
     expDate    = allDates(iDate,:);
     datFileNum = datFileNumAll{iDate,1};
     saveFolder = ['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\Results'];
 
+    % Create folders
     if ~exist([saveFolder '\AvgSpectrograms'],'dir'); [~,~] = mkdir([saveFolder '\AvgSpectrograms']); end
     if ~exist([saveFolder '\IntraProbeCorr'],'dir');  [~,~] = mkdir([saveFolder '\IntraProbeCorr']);  end
     if ~exist([saveFolder '\InterProbeCorr'],'dir');  [~,~] = mkdir([saveFolder '\InterProbeCorr']);  end
     if ~exist([saveFolder '\Transition'],'dir');      [~,~] = mkdir([saveFolder '\Transition']);      end
 
     for iFile = 1:length(datFileNum)
-        if strcmp(expDate,'09_19_2022') && iFile == 4;  continue; end
-        if strcmp(expDate,'02_07_2023') && iFile == 2; continue;  end
-        if strcmp(expDate,'04_11_2023') && iFile == 10; continue; end
+        clear fileNum probe1 probe2 
+        % if strcmp(expDate,'09_19_2022') && iFile == 4;  continue; end
+        % if strcmp(expDate,'02_07_2023') && iFile == 2;  continue;  end
+        % if strcmp(expDate,'04_11_2023') && iFile == 10; continue; end
 
         fileNum = datFileNum(iFile);
+        probe1 = single(allProbeData{fileNum,iDate}.probe1Ch);
+        probe2 = single(allProbeData{fileNum,iDate}.probe2Ch);
 
         disp(['Preprocessing: ' num2str(expDate) ' File: ' num2str(fileNum)]);
 
@@ -41,15 +47,17 @@ for iDate = 1:size(allDates,1)
         for iProbe = 1:2
             clear probe channls spec timeVals powTimeBin badElecThresh badChVal badTimeThresh badTimes probeLabel
 
-            if isempty(probe1{fileNum,iDate}) || isempty(probe2{fileNum,iDate})
+            if isempty(probe1) || isempty(probe2)
                 badElecA{fileNum,iDate} = [];
                 badElecB{fileNum,iDate} = [];
+
                 continue;
             end
 
             switch iProbe
-                case 1
-                    probe = double(probe1{fileNum,iDate});                    
+                case 1 % Probe A
+                    probe     = probe1;  
+                    probeName = 'A';
                     if size(probe,2) == 33; probe(:,1) = []; end
                     channels  = 1:size(probe,2);
 
@@ -57,100 +65,123 @@ for iDate = 1:size(allDates,1)
                         probeLabel = probeLabelA{iDate,1}(fileNum,:);
                     else
                         probeLabel = [];
-                    end
-                    probeName = 'A';
+                    end                    
 
-                case 2
-                    probe = probe2{fileNum,iDate};
+                case 2 % Probe B
+                    probe     = probe2;
                     probeName = 'B';
+                    channels  = 1:size(probe,2);
 
-                    if ~strcmp(expDate,'08_08_2022')
-                        if size(probe,2) == 33; probe(:,1) = []; end
-                        channels = [1:13 15:21 23:size(probe,2)];
-                        if ~isempty(probeLabelB{iDate,1})
-                            probeLabel = probeLabelB{iDate,1}(fileNum,:);
-                        else
-                            probeLabel = [];
-                        end
+                    if ~isempty(probeLabelB{iDate,1})
+                        probeLabel = probeLabelB{iDate,1}(fileNum,:);
                     else
-                        badTimesB = [];
                         probeLabel = [];
-                        badElecB{fileNum,iDate} = [];
-                        continue;
                     end
+
+                    % if iDate>5
+                    %     if size(probe,2) == 33; probe(:,1) = []; end
+                    %     channels = [1:13 15:21 23:size(probe,2)];
+
+                    % 
+                    % elseif strcmp(expDate,'08_08_2022')
+                    %     badTimesB = [];
+                    %     probeLabel = [];
+                    %     badElecB{fileNum,iDate} = [];
+                    %     continue;
+                    % else
+                    %     channels = 1:size(probe,2);
+                    %     if ~isempty(probeLabelB{iDate,1})
+                    %         probeLabel = probeLabelB{iDate,1}(fileNum,:);
+                    %     else
+                    %         probeLabel = [];
+                    %     end
+                    % 
+                    % end
             end                     
 
             % Remove bad channels
             badChVal = [];
+            
+            if size(probe,2)~=1
 
-            if ~isempty(probeLabel) % Bad channel from previous
-                if strcmp(probeLabel,'BD29')
-                    channels(ismember(channels,8)) = [];
-                    badChVal = [badChVal 8];
+                [spec,timeValsSpec,freqValsSpec] = mtspecgramc(probe,[5 2],params);
+                powTimeBin = squeeze(sum(10.*log10(abs(spec)),2));
+                if isempty(timeValsSpec); continue; end
 
-                elseif strcmp(probeLabel,'CDE1')
-                    channels(ismember(channels,9)) = [];
-                    badChVal = [badChVal 9];
+                if length(channels)~= 1       % Determine the minimum and maximum threshold to determine bad channels
+                    badElecThreshHigh = (median(powTimeBin,2)+5*mad(powTimeBin,1,2));
+                    badElecThreshLow  = (median(powTimeBin,2)-5*mad(powTimeBin,1,2));
 
-                elseif strcmp(probeLabel,'D553')
-                    channels(ismember(channels,5)) = [];
-                    badChVal = [badChVal 5];
-
-                elseif strcmp(probeLabel,'B25A')
-                    channels(ismember(channels,27)) = [];
-                    badChVal = [badChVal 27];
-
-                elseif strcmp(probeLabel,'0763')
-                    channels(ismember(channels,[2 4])) = [];
-                    badChVal = [badChVal 2 4];
+                    badChVal = [badChVal channels(sum((powTimeBin>badElecThreshHigh),1) >= floor(0.75*size(powTimeBin,1)) |(sum((powTimeBin<badElecThreshLow),1) >= floor(0.75*size(powTimeBin,1))))];
                 end
-            end
 
-            if (iProbe == 2 && iDate<=5); badChVal = [badChVal 14 22]; end
+                if ~isempty(probeLabel) % Check if previously known bad channels have been identified
+                    if strcmp(probeLabel,'BD29')
+                        if ~ismember(badChVal,8); badChVal = unique([badChVal 8]); end
 
-            % Obtain the spectrogram and determine bad channels
-            [spec,timeValsSpec,freqValsSpec] = mtspecgramc(probe(:,channels),[5 2],params);
-            powTimeBin = squeeze(sum(10.*log10(abs(spec)),2));
-            if isempty(timeValsSpec); continue; end
+                    elseif strcmp(probeLabel,'CDE1')
+                        if ~ismember(badChVal,9); badChVal = unique([badChVal 9]); end
 
-            if length(channels)~= 1       % Determine the minimum and maximum threshold to determine bad channels
-                badElecThreshHigh = (median(powTimeBin,2)+5*mad(powTimeBin,1,2));
-                badElecThreshLow  = (median(powTimeBin,2)-5*mad(powTimeBin,1,2));
+                    elseif strcmp(probeLabel,'D553')
+                        if ~ismember(badChVal,5); badChVal = unique([badChVal 5]); end
 
-%                 if ~exist([ saveFolder '\AvgSpectrograms\ChannelPowers_' num2str(iFile) '_Probe' probeName '.png'],'file') ||  saveFigureFlag
-%                     figure; plot(powTimeBin); hold on;
-%                     plot(badElecThreshHigh,'k','LineWidth',2); plot(badElecThreshLow,'k','LineWidth',2);
-%                     title(['Power of all channels and thresholds for Probe: '  probeName]);
-%                     f = gcf; exportgraphics(f,[saveFolder '\AvgSpectrograms\ChannelPowers' num2str(iFile) '_Probe' probeName '.png'],'Resolution',300);
-%                     close gcf;
-%                 end
+                    elseif strcmp(probeLabel,'B25A')
+                        if ~ismember(badChVal,27); badChVal = unique([badChVal 27]); end
+                        channels(ismember(channels,27)) = [];
+                        badChVal = [badChVal 27];
 
-                badChVal = [badChVal channels(sum((powTimeBin>badElecThreshHigh),1) >= floor(0.75*size(powTimeBin,1)) |(sum((powTimeBin<badElecThreshLow),1) >= floor(0.75*size(powTimeBin,1))))];
+                    elseif strcmp(probeLabel,'0763')
+                        if ~ismember(badChVal,[2 4]); badChVal = unique([badChVal 2 4]); end
+                    end
+                end
+
+                % Check if channels 14,22 are included in the bad channels
+                % when nano2+stim front ends are used for recording.
+                if iProbe==2 && ~(strcmp(expDate,'10_21_2024')|| strcmp(expDate,'04_30_2025')) 
+                    if sum(ismember(badChVal,[14 22]))~=2
+                        badChVal = unique([badChVal 14 22]);
+                    end 
+                end 
+
+                % Remove bad channels from the probe
                 if ~isempty(badChVal); channels(ismember(channels,badChVal)) = []; end
+
+            else
+                badChVal = [];
             end
 
-            % Remove bad channels from the probe
-            if ~isempty(badChVal); channels(ismember(channels,badChVal)) = []; end
 
             % Determine the bad time segments
-            badTimeInd = []; badTimes = [];
-            [spec,~,~] = mtspecgramc(probe(:,channels(channels>=15)),[5 2],params);
-            meanS = mean(10.*log10(abs(spec)),3,'omitnan'); % Mean across channels 15-32
-            powMeanS = squeeze(sum(meanS,2));
+            clear probeBL
+            probeBL = single(filtfilt(bG,aG,double(probe(:,channels)))); % Filtering the gamma band
 
-            badTimeThresh   = (median(powMeanS,1)+4.5*mad(powMeanS,1,1));
-            badTimeIndOld = floor(timeValsSpec(powMeanS>badTimeThresh))*1e3;
+            % Bad time segment threshold bounds
+            if length(channels)~= 1 % Linear array
+                badTimeThreshHigh = mean(probeBL(:,15:end),'all','omitnan') + 5*std(probeBL(:,15:end),[],[1,2]);
+                badTimeThreshLow  = mean(probeBL(:,15:end),'all','omitnan') - 5*std(probeBL(:,15:end),[],[1,2]);
+            else % Single probe
+                badTimeThreshHigh = mean(probeBL,'omitnan') + 5*std(probeBL,[]);
+                badTimeThreshLow= mean(probeBL,'omitnan')- 5*std(probeBL,[]);
+            end
+
+            % Determine threshold crossings...
+            badTimeIndOld = find(mean(probeBL(:,15:end),2,'omitnan')>badTimeThreshHigh | mean(probeBL(:,15:end),2,'omitnan')<badTimeThreshLow);
+           
+            badTimeInd = []; badTimes = [];
 
             if ~isempty(badTimeIndOld)
-                badTimeInd =[(badTimeIndOld-1e3)'  (badTimeIndOld+1e3)']; % Taking one second before and one second after bad time segments
-
+                % Taking 50 ms before and after each threshold crossing
+                badTimeInd =[(badTimeIndOld-50)  (badTimeIndOld+50)]; 
+                
                 for iL = 1:size(badTimeInd,1)
-                    badTimes = [ badTimes badTimeInd(iL,1): badTimeInd(iL,2)];
+                    badTimes = [badTimes badTimeInd(iL,1): badTimeInd(iL,2)];
                 end
-                probe(badTimes,:) = [];
-            end
-            badTimes = unique(badTimes);
 
+                badTimes = unique(badTimes); 
+                badTimes(badTimes>size(probeBL,1)) = [];
+                badTimes(badTimes<=0) = [];
+            end
+          
             switch iProbe
                 case 1
                     badTimesA               = badTimes;
@@ -219,13 +250,13 @@ for iDate = 1:size(allDates,1)
                     figTitle = 'WB';
 
                 case 2
-                    pA = filtfilt(sosG,gG,double(probe1{fileNum,iDate}));
-                    pB = filtfilt(sosG,gG,double(probe2{fileNum,iDate}));
+                    pA = single(filtfilt(bG,aG,double(probe1{fileNum,iDate})));
+                    pB = single(filtfilt(bG,aG,double(probe2{fileNum,iDate})));
                     figTitle = 'Gamma band';
 
                 case 3
-                    pA = filtfilt(sosA,gA,double(probe1{fileNum,iDate}));
-                    pB = filtfilt(sosA,gA,double(probe2{fileNum,iDate}));
+                    pA = single(filtfilt(bA,aA,double(probe1{fileNum,iDate})));
+                    pB = single(filtfilt(bA,aA,double(probe1{fileNum,iDate})));
                     figTitle = 'Alpha band';
             end
 
@@ -266,25 +297,23 @@ for iDate = 1:size(allDates,1)
 
 
             % Plot and save the intra probe correlation heatmaps...
-            if ~exist([saveFolder '\IntraProbeCorr\ProbeA_File_' num2str(fileNum) '_' figTitle '.png'],'file') || ~exist([saveFolder '\IntraProbeCorr\ProbeA_File_' num2str(fileNum) '_' figTitle '.eps'],'file') ||  saveFigureFlag
+            if ~exist([saveFolder '\IntraProbeCorr\ProbeA_File_' num2str(fileNum) '_' figTitle '.png'],'file') ||  saveFigureFlag
                 figure;
                 imagesc(imgaussfilt(corr(pA,'Rows','complete'),1)); colormap jet; xticks(1:32); yticks(1:32); clim([ 0 1]); colorbar;
                 title(strrep([expDate ' Datafile ' num2str(iFile) ' Probe A - ' figTitle ],'_','\_'));
                 f = gcf; exportgraphics(f,[saveFolder '\IntraProbeCorr\ProbeA_File_' num2str(fileNum) '_' figTitle '.png'],'Resolution',300);
-                exportgraphics(f,[saveFolder '\IntraProbeCorr\ProbeA_File_' num2str(fileNum) '_' figTitle '.eps'],'ContentType','vector');
                 close gcf;
             end
 
-            if ~exist([saveFolder '\IntraProbeCorr\ProbeB_File_' num2str(fileNum) '_' figTitle '.png'],'file')|| ~exist([saveFolder '\IntraProbeCorr\ProbeB_File_' num2str(fileNum) '_' figTitle '.eps'],'file') ||  saveFigureFlag
+            if ~exist([saveFolder '\IntraProbeCorr\ProbeB_File_' num2str(fileNum) '_' figTitle '.png'],'file')|| saveFigureFlag
                 figure;
                 imagesc(imgaussfilt(corr(pB,'Rows','complete'),1)); colormap jet; xticks(1:30); yticks(1:30); clim([ 0 1]); colorbar;
                 xticklabels(probeBList); yticklabels(probeBList);title(strrep([expDate ' Datafile ' num2str(iFile) ' Probe B - ' figTitle  ],'_','\_'));
                 f = gcf; exportgraphics(f,[saveFolder '\IntraProbeCorr\ProbeB_File_' num2str(fileNum) '_' figTitle '.png'],'Resolution',300);
-                exportgraphics(f,[saveFolder '\IntraProbeCorr\ProbeB_File_' num2str(fileNum) '_' figTitle '.eps'],'ContentType','vector');
                 close gcf;
             end
 
-            if ~exist([saveFolder '\IntraProbeCorr\Marginal_File_' num2str(fileNum) '_' figTitle '.png'],'file') || ~exist([saveFolder '\IntraProbeCorr\ProbeA_File_' num2str(fileNum) '_' figTitle '.eps'],'file') ||  saveFigureFlag
+            if ~exist([saveFolder '\IntraProbeCorr\Marginal_File_' num2str(fileNum) '_' figTitle '.png'],'file') || saveFigureFlag
                 figure; subplot(1,2,1);
 
                 imagesc(imgaussfilt(marginalA,1)); colormap jet; yticks(1:32); clim([0 1]);colorbar;  %caxis([ 0 max(marginalA)]);
@@ -298,12 +327,11 @@ for iDate = 1:size(allDates,1)
                 sgtitle(strrep([expDate ' Datafile ' num2str(iFile) ' ' figTitle ],'_','\_'));
 
                 f = gcf; exportgraphics(f,[saveFolder '\IntraProbeCorr\Marginal_File_' num2str(fileNum) '_' figTitle '.png'],'Resolution',300);
-                exportgraphics(f,[saveFolder '\IntraProbeCorr\Marginal_File_' num2str(fileNum) '_' figTitle '.eps'],'ContentType','vector');
                 close gcf;
             end
 
             % Plot and save the intra probe verticals...
-            if ~exist([saveFolder '\Transition\Transition_' num2str(fileNum) '_Probe A_' figTitle '.png'],'file') || ~exist([saveFolder '\Transition\Transition_' num2str(fileNum) '_Probe A_' figTitle '.eps'],'file') ||  saveFigureFlag
+            if ~exist([saveFolder '\Transition\Transition_' num2str(fileNum) '_Probe A_' figTitle '.png'],'file')  ||  saveFigureFlag
                 if iBand~=3
                     for iProbe = 1:2
                         clear corrIn corrOut corrDeep probeTitle in
@@ -342,19 +370,17 @@ for iDate = 1:size(allDates,1)
                         sgtitle(strrep([expDate ' Datafile ' num2str(fileNum) ' ' probeTitle ' - ' figTitle  ],'_','\_'));
 
                         f = gcf; exportgraphics(f,[saveFolder '\Transition\Transition_' num2str(fileNum) '_' probeTitle '_' figTitle '.png'],'Resolution',300);
-                        exportgraphics(f,[saveFolder '\Transition\Transition_' num2str(fileNum) '_' probeTitle '_' figTitle '.eps'],'ContentType','vector');
                         close gcf;
                     end
                 end
             end
 
             % Plot and save the pairwise correlation heatmaps
-            if ~exist([saveFolder '\InterProbeCorr\AllCh_File_' num2str(fileNum) '_' figTitle '.png'],'file') || ~exist([saveFolder '\InterProbeCorr\AllCh_File_' num2str(fileNum) '_' figTitle '.eps'],'file') ||  saveFigureFlag
+            if ~exist([saveFolder '\InterProbeCorr\AllCh_File_' num2str(fileNum) '_' figTitle '.png'],'file') ||  saveFigureFlag
                 figure; imagesc(imgaussfilt(corr(pA,pB,'rows','complete'),1)); colormap jet; clim([ 0 1]);
                 title(strrep([expDate ' Datafile ' num2str(fileNum) ': Pairwise correlation -  ' figTitle],'_','\_')); xlabel('Probe B'); ylabel('Probe A'); colorbar;
                 yticks(1:32); xticks(1:30); xticklabels(probeBList);
                 f = gcf; exportgraphics(f,[saveFolder '\InterProbeCorr\AllCh_File_' num2str(fileNum) '_' figTitle '.png'],'Resolution',300);
-                exportgraphics(f,[saveFolder '\InterProbeCorr\AllCh_File_' num2str(fileNum) '_' figTitle '.eps'],'ContentType','vector');
                 close gcf;
             end
         end
