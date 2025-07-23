@@ -20,7 +20,7 @@ gammaBand      = [30 90]; [bG,aG] = butter(3,gammaBand./(fs/2),'bandpass'); % Ga
 alphaBand      = [8 12];  [bA,aA] = butter(3,alphaBand./(fs/2),'bandpass'); % Alpha band filtering parameters
 
 for iDate = 1:size(allDates,1) % All experiments
-    clc; clear expdate datFileNum datFileName
+    clear expdate datFileNum datFileName
     expDate    = allDates(iDate,:);
     datFileNum = datFileNumAll{iDate,1};
     saveFolder = ['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\Results'];
@@ -32,7 +32,7 @@ for iDate = 1:size(allDates,1) % All experiments
     if ~exist([saveFolder '\Transition'],'dir');      [~,~] = mkdir([saveFolder '\Transition']);      end
 
     for iFile = 1:length(datFileNum)
-        clear fileNum probe1 probe2 
+        clear fileNum probe1 probe2 badTimesA badTimesB
         % if strcmp(expDate,'09_19_2022') && iFile == 4;  continue; end
         % if strcmp(expDate,'02_07_2023') && iFile == 2;  continue;  end
         % if strcmp(expDate,'04_11_2023') && iFile == 10; continue; end
@@ -41,7 +41,17 @@ for iDate = 1:size(allDates,1) % All experiments
         probe1 = single(allProbeData{fileNum,iDate}.probe1Ch);
         probe2 = single(allProbeData{fileNum,iDate}.probe2Ch);
 
+        if iDate>=6
+            [bL,aL] = butter(3,([6 250]./(fs/2)),'bandpass');
+            probe1 = single(filtfilt(bL,aL,double(probe1)));
+            probe2 = single(filtfilt(bL,aL,double(probe2)));
+        end
+
         disp(['Preprocessing: ' num2str(expDate) ' File: ' num2str(fileNum)]);
+
+        [~,timeValsSpec1,~] = mtspecgramc(probe1,[5 2],params); % Checking spectrogram for bad recording/run 
+        [~,timeValsSpec2,~] = mtspecgramc(probe2,[5 2],params);
+        if isempty(timeValsSpec1)|| isempty(timeValsSpec2); continue; end   
 
         % Finding bad time segments
         for iProbe = 1:2
@@ -53,7 +63,8 @@ for iDate = 1:size(allDates,1) % All experiments
 
                 continue;
             end
-
+            
+            
             switch iProbe
                 case 1 % Probe A
                     probe     = probe1;  
@@ -61,7 +72,7 @@ for iDate = 1:size(allDates,1) % All experiments
                     if size(probe,2) == 33; probe(:,1) = []; end
                     channels  = 1:size(probe,2);
 
-                    if ~strcmp(expDate,'08_08_2022') && ~isempty(probeLabelA{iDate,1})
+                    if ~isempty(probeLabelA{iDate,1})
                         probeLabel = probeLabelA{iDate,1}(fileNum,:);
                     else
                         probeLabel = [];
@@ -103,45 +114,58 @@ for iDate = 1:size(allDates,1) % All experiments
             badChVal = [];
             
             if size(probe,2)~=1
-
-                [spec,timeValsSpec,freqValsSpec] = mtspecgramc(probe,[5 2],params);
-                powTimeBin = squeeze(sum(10.*log10(abs(spec)),2));
-                if isempty(timeValsSpec); continue; end
-
-                if length(channels)~= 1       % Determine the minimum and maximum threshold to determine bad channels
-                    badElecThreshHigh = (median(powTimeBin,2)+5*mad(powTimeBin,1,2));
-                    badElecThreshLow  = (median(powTimeBin,2)-5*mad(powTimeBin,1,2));
-
-                    badChVal = [badChVal channels(sum((powTimeBin>badElecThreshHigh),1) >= floor(0.75*size(powTimeBin,1)) |(sum((powTimeBin<badElecThreshLow),1) >= floor(0.75*size(powTimeBin,1))))];
-                end
+                
+                % [spec,timeValsSpec,freqValsSpec] = mtspecgramc(probe,[5 2],params);
+                % freqIdx = freqValsSpec>=65 & freqValsSpec<=85;
+                % powTimeBin = squeeze(sum(10.*log10(abs(spec(:,freqIdx,:))),2));
+                % % [spec,timeValsSpec,freqValsSpec] = mtspecgramc(probe,[5 2],params);
+                % % freqIdx = freqValsSpec>=65 & freqValsSpec<=85;
+                % % powTimeBin = squeeze(sum(spec(:,freqIdx,:),2));
+                % 
+                % if isempty(timeValsSpec); continue; end
+                % 
+                % if length(channels)~= 1       % Determine the minimum and maximum threshold to determine bad channels
+                %     badElecThreshHigh = (median(powTimeBin,2)+5*mad(powTimeBin,1,2));
+                %     badElecThreshLow  = (median(powTimeBin,2)-5*mad(powTimeBin,1,2));
+                % 
+                %     badChVal = [badChVal channels(sum((powTimeBin>badElecThreshHigh),1) >= floor(0.75*size(powTimeBin,1)) |(sum((powTimeBin<badElecThreshLow),1) >= floor(0.75*size(powTimeBin,1))))];
+                % end
 
                 if ~isempty(probeLabel) % Check if previously known bad channels have been identified
                     if strcmp(probeLabel,'BD29')
-                        if ~ismember(badChVal,8); badChVal = unique([badChVal 8]); end
+                        if ~any(badChVal==8); badChVal = unique([badChVal 8]); end
 
                     elseif strcmp(probeLabel,'CDE1')
-                        if ~ismember(badChVal,9); badChVal = unique([badChVal 9]); end
+                        if ~any(badChVal==9); badChVal = unique([badChVal 9]); end
 
                     elseif strcmp(probeLabel,'D553')
-                        if ~ismember(badChVal,5); badChVal = unique([badChVal 5]); end
+                        if ~any(badChVal==5); badChVal = unique([badChVal 5]); end
 
                     elseif strcmp(probeLabel,'B25A')
-                        if ~ismember(badChVal,27); badChVal = unique([badChVal 27]); end
-                        channels(ismember(channels,27)) = [];
-                        badChVal = [badChVal 27];
+                        if ~any(badChVal==27); badChVal = unique([badChVal 27]); end
 
                     elseif strcmp(probeLabel,'0763')
-                        if ~ismember(badChVal,[2 4]); badChVal = unique([badChVal 2 4]); end
+                        if ~(any(badChVal==2) && any(badChVal==4)); badChVal = unique([badChVal 2 4]); end
                     end
                 end
 
                 % Check if channels 14,22 are included in the bad channels
                 % when nano2+stim front ends are used for recording.
-                if iProbe==2 && ~(strcmp(expDate,'10_21_2024')|| strcmp(expDate,'04_30_2025')) 
+                if iProbe==2 && ~(strcmp(expDate,'10_21_2024')|| strcmp(expDate,'04_30_2025'))
                     if sum(ismember(badChVal,[14 22]))~=2
                         badChVal = unique([badChVal 14 22]);
-                    end 
-                end 
+                    end
+                end
+
+                % Remove other channels that were identified from
+                % spectrogram/raw power method
+                if iProbe==2
+                    if strcmp(expDate,'02_21_2023') && fileNum == 7
+                        badChVal = unique([badChVal 29]);
+                    elseif strcmp(expDate,'10_17_2022') && fileNum == 9
+                        badChVal = unique([badChVal 27]);
+                    end
+                end
 
                 % Remove bad channels from the probe
                 if ~isempty(badChVal); channels(ismember(channels,badChVal)) = []; end
@@ -150,38 +174,84 @@ for iDate = 1:size(allDates,1) % All experiments
                 badChVal = [];
             end
 
-
             % Determine the bad time segments
-            clear probeBL
-            probeBL = single(filtfilt(bG,aG,double(probe(:,channels)))); % Filtering the gamma band
+            % clear probeBL
+            % probeBL = single(filtfilt(bG,aG,double(probe(:,channels)))); % Filtering the gamma band
+            %
+            % % Bad time segment threshold bounds
+            % if length(channels)~= 1 % Linear array
+            %     badTimeThreshHigh = mean(probeBL(:,15:end),'all','omitnan') + 5*std(probeBL(:,15:end),[],[1,2]);
+            %     badTimeThreshLow  = mean(probeBL(:,15:end),'all','omitnan') - 5*std(probeBL(:,15:end),[],[1,2]);
+            % else % Single probe
+            %     badTimeThreshHigh = mean(probeBL,'omitnan') + 5*std(probeBL,[]);
+            %     badTimeThreshLow= mean(probeBL,'omitnan')- 5*std(probeBL,[]);
+            % end
+            %
+            % % Determine threshold crossings...
+            % badTimeIndOld = find(mean(probeBL(:,15:end),2,'omitnan')>badTimeThreshHigh | mean(probeBL(:,15:end),2,'omitnan')<badTimeThreshLow);
+            %
+            % badTimeInd = []; badTimes = [];
+            %
+            % if ~isempty(badTimeIndOld)
+            %     % Taking 250 ms before and after each threshold crossing
+            %     badTimeInd =[(badTimeIndOld-250)  (badTimeIndOld+250)];
+            %
+            %     for iL = 1:size(badTimeInd,1)
+            %         badTimes = [badTimes badTimeInd(iL,1): badTimeInd(iL,2)];
+            %     end
+            %
+            %     badTimes = unique(badTimes);
+            %     badTimes(badTimes>size(probeBL,1)) = [];
+            %     badTimes(badTimes<=0) = [];
+            % end
+            clear probeBL badTimeThreshHigh badTimeThreshLow badTimeIndOld
 
-            % Bad time segment threshold bounds
-            if length(channels)~= 1 % Linear array
-                badTimeThreshHigh = mean(probeBL(:,15:end),'all','omitnan') + 5*std(probeBL(:,15:end),[],[1,2]);
-                badTimeThreshLow  = mean(probeBL(:,15:end),'all','omitnan') - 5*std(probeBL(:,15:end),[],[1,2]);
-            else % Single probe
-                badTimeThreshHigh = mean(probeBL,'omitnan') + 5*std(probeBL,[]);
-                badTimeThreshLow= mean(probeBL,'omitnan')- 5*std(probeBL,[]);
-            end
+            probeBL = envelope(probe(:,channels));
+            chLim = 15; thresh = 4; timeBin = 50;
 
-            % Determine threshold crossings...
-            badTimeIndOld = find(mean(probeBL(:,15:end),2,'omitnan')>badTimeThreshHigh | mean(probeBL(:,15:end),2,'omitnan')<badTimeThreshLow);
-           
-            badTimeInd = []; badTimes = [];
+            badTimeThreshHigh = median(probeBL(:,chLim:end),'all','omitnan') +thresh*mad(probeBL(:,chLim:end),[],[1,2]);
+            badTimeThreshLow  = median(probeBL(:,chLim:end),'all','omitnan') -thresh*mad(probeBL(:,chLim:end),[],[1,2]);
+            badTimeIndOld = find(mean(probeBL(:,chLim:end),2,'omitnan')>=badTimeThreshHigh | mean(probeBL(:,chLim:end),2,'omitnan')<=badTimeThreshLow);
+            badTimeInd = []; badTimes = []; clear badTimesCell
 
-            if ~isempty(badTimeIndOld)
-                % Taking 50 ms before and after each threshold crossing
-                badTimeInd =[(badTimeIndOld-50)  (badTimeIndOld+50)]; 
-                
-                for iL = 1:size(badTimeInd,1)
-                    badTimes = [badTimes badTimeInd(iL,1): badTimeInd(iL,2)];
-                end
+            badTimeInd   = [(badTimeIndOld-timeBin)  (badTimeIndOld+timeBin)];
+            badTimesCell = arrayfun(@(x) badTimeInd(x,1):badTimeInd(x,2), 1:size(badTimeInd,1), 'UniformOutput', false);
+            badTimes     = unique([badTimesCell{:}]);
 
-                badTimes = unique(badTimes); 
-                badTimes(badTimes>size(probeBL,1)) = [];
-                badTimes(badTimes<=0) = [];
-            end
-          
+            badTimes(badTimes>size(probeBL,1)) = [];
+            badTimes(badTimes<=0)              = [];
+
+            % [spec,timeValsSpec,~] = mtspecgramc(probe,[5 2],params);
+            % meanS = mean(10.*log10(abs(spec(:,:,15:end))),3,'omitnan');
+            % powMeanS = squeeze(sum(meanS,2));
+            % 
+            % badTimeThreshHigh   = (median(powMeanS,1)+3*mad(powMeanS,1,1));
+            % badTimeThreshLow   = (median(powMeanS,1)-3*mad(powMeanS,1,1));
+            % 
+            % badTimeInd = floor(timeValsSpec(powMeanS>badTimeThreshHigh | powMeanS<badTimeThreshLow)*1e3);
+            % 
+            % badTimes = [];
+            % if ~isempty(badTimeInd)
+            %     jumpIdx = find(isoutlier([0 diff(badTimeInd)]));
+            % 
+            %     for iL = 1:length(jumpIdx)
+            %         startIdx = badTimeInd(jumpIdx(iL));
+            % 
+            %         if iL == length(jumpIdx)
+            %             endIdx = badTimeInd(end);
+            %         else
+            %             endIdx = badTimeInd(jumpIdx(iL+1)-1);
+            %         end
+            % 
+            %         if startIdx == endIdx
+            %             badTimes =[badTimes startIdx-50:startIdx+50];
+            %         else
+            %             badTimes = [badTimes startIdx:endIdx];
+            %         end
+            %     end
+            %     badTimes = unique(badTimes);
+            % end
+
             switch iProbe
                 case 1
                     badTimesA               = badTimes;
@@ -191,21 +261,6 @@ for iDate = 1:size(allDates,1) % All experiments
                     badElecB{fileNum,iDate} = badChVal;
             end
 
-            % Storing the average spectrogram and its corresponding summed
-            % power over time...
-            if ~exist([ saveFolder '\AvgSpectrograms\AvgSpecgram_' num2str(iFile) '_Probe' probeName '.png'],'file') ||  saveFigureFlag
-                figure('units','normalized','outerposition',[0 0 1 1]);
-                subplot(2,1,1);
-                imagesc(timeValsSpec,freqValsSpec,meanS'); colormap jet; shading interp; set(gca,'YDir','normal');
-                xlabel('Time (s)'); ylabel('Frequency (Hz)'); clim([-60 60]); title('Spectrogram'); colorbar;
-                subplot(2,1,2);
-                plot(timeValsSpec,powMeanS,'LineWidth',2); xlabel('Time (s)'); ylabel('Sum of powers (dB)'); hold on;
-                yline(badTimeThresh,'k',['median+' num2str(4.5) '*MAD'],'LineWidth',2);title('Sum of powers across all frequencies for a timebin')
-
-                sgtitle(strrep([expDate ' datafile ' num2str(fileNum) ' Probe: ' probeName ],'_','\_'));
-                f = gcf; exportgraphics(f,[saveFolder '\AvgSpectrograms\AvgSpecgram_' num2str(iFile) '_Probe' probeName '.png'],'Resolution',300);
-                close gcf;
-            end
 
             % Average spectrogram before and after removal of bad time
             % segments...
@@ -213,20 +268,23 @@ for iDate = 1:size(allDates,1) % All experiments
                 figure('units','normalized','outerposition',[0 0 1 1]);
 
                 subplot(2,1,1);
+                [spec,timeValsSpec,freqValsSpec] = mtspecgramc(probe(:,channels(channels>=15)),[5 2],params);
+                meanS = mean(10.*log10(abs(spec)),3,'omitnan'); % Mean across channels 15-32
                 imagesc(timeValsSpec,freqValsSpec,meanS'); colormap jet; shading interp; set(gca,'YDir','normal');
-                xlabel('Time (s)'); ylabel('Frequency (Hz)'); clim([-60 60]); title('Spectrogram before removal of bad time segments'); colorbar;
+                xlabel('Time (s)'); ylabel('Frequency (Hz)'); clim([-30 30]); title('Spectrogram before removal of bad time segments'); colorbar;
 
                 subplot(2,1,2);
-                [spec,~,~] = mtspecgramc(probe(:,channels(channels>=15)),[5 2],params);
-                meanNew = mean(10.*log10(abs(spec)),3,'omitnan'); % Mean across channels 15-32
+                probeT = probe; probeT(badTimes,:) = [];
+                [specT,~,~] = mtspecgramc(probeT(:,channels(channels>=15)),[5 2],params);
+                meanNew = mean(10.*log10(abs(specT)),3,'omitnan'); % Mean across channels 15-32
                 imagesc(timeValsSpec,freqValsSpec,meanNew'); colormap jet; shading interp; set(gca,'YDir','normal');
-                xlabel('Time (s)'); ylabel('Frequency (Hz)'); clim([-60 60]); title('Spectrogram after removal of bad time segments'); colorbar; 
+                xlabel('Time (s)'); ylabel('Frequency (Hz)'); clim([-30 30]); title('Spectrogram after removal of bad time segments'); colorbar; 
 
                 sgtitle(strrep([expDate ' datafile ' num2str(fileNum) ' Probe: ' probeName ],'_','\_'));
                 f = gcf; exportgraphics(f,[saveFolder '\AvgSpectrograms\AvgSpecgram_Before_After_' num2str(iFile) '_Probe' probeName '.png'],'Resolution',300);
                 close gcf;
             end
-
+           
         end
 
         allBadTimes{fileNum,iDate} = single(unique([badTimesA,badTimesB])); % Common bad time segments in both probes
@@ -245,18 +303,18 @@ for iDate = 1:size(allDates,1) % All experiments
             clear pA pB figTitle b a
             switch iBand
                 case 1
-                    pA = probe1{fileNum,iDate};
-                    pB = probe2{fileNum,iDate};
+                    pA = probe1;
+                    pB = probe2;
                     figTitle = 'WB';
 
                 case 2
-                    pA = single(filtfilt(bG,aG,double(probe1{fileNum,iDate})));
-                    pB = single(filtfilt(bG,aG,double(probe2{fileNum,iDate})));
+                    pA = single(filtfilt(bG,aG,double(probe1)));
+                    pB = single(filtfilt(bG,aG,double(probe2)));
                     figTitle = 'Gamma band';
 
                 case 3
-                    pA = single(filtfilt(bA,aA,double(probe1{fileNum,iDate})));
-                    pB = single(filtfilt(bA,aA,double(probe1{fileNum,iDate})));
+                    pA = single(filtfilt(bA,aA,double(probe1)));
+                    pB = single(filtfilt(bA,aA,double(probe1)));
                     figTitle = 'Alpha band';
             end
 
