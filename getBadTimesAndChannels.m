@@ -63,8 +63,7 @@ for iDate = 1:size(allDates,1) % All experiments
 
                 continue;
             end
-            
-            
+                        
             switch iProbe
                 case 1 % Probe A
                     probe     = probe1;  
@@ -220,6 +219,16 @@ for iDate = 1:size(allDates,1) % All experiments
 
             badTimes(badTimes>size(probeBL,1)) = [];
             badTimes(badTimes<=0)              = [];
+            
+            % Remove bad times as determined from the spectrogram, and that
+            % did not get removed properly after bad time segment removal
+            if iProbe==2 && strcmp(expDate,'11_01_2021') && fileNum ==10
+                badTimes = unique([badTimes 210e3:310e3]);
+                
+            elseif iProbe == 2 && strcmp(expDate,'10_10_2022') && fileNum ==7
+                badTimes = unique([badTimes 360e3:400e3]);
+            end
+
 
             % [spec,timeValsSpec,~] = mtspecgramc(probe,[5 2],params);
             % meanS = mean(10.*log10(abs(spec(:,:,15:end))),3,'omitnan');

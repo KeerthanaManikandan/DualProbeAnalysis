@@ -37,7 +37,7 @@ params.trialave = 0;
 [z,p,k] = butter(2,[0.01 0.1]./(fs/2),'bandpass');
 [sos,g] = zp2sos(z,p,k);
 
-bandLabels = {'Alpha band'; 'Beta band'; 'Gamma band';'Wideband'};
+bandLabels = {'Theta'; 'Alpha'; 'Beta'; 'Gamma';'Spiking'};
 
 %% Load both monkey data
 clear alphaVarsAB alphaVarsBA gammaVarsAB gammaVarsBA one_oneMapAlpha one_oneMapGamma
@@ -67,7 +67,7 @@ for iM = 1:2
             monkeyName = 'Whiskey';
     end
 
-    mVars     = load(['D:\Data\' monkeyName '_SqM\Left Hemisphere\' monkeyName '_varsNew.mat']);
+    mVars     = load(['D:\Data\' monkeyName '_SqM\Left Hemisphere\DualProbeVars.mat']);
     dist      = [dist; mVars.distSitesAll];
     fcVals    = [fcVals; mVars.connValsAll];
     pairType  = [pairType; mVars.pairClass];
@@ -77,15 +77,15 @@ for iM = 1:2
     badDatIdx = [badDatIdx; mVars.nanIdx + lenBadDat];
 
     % Pairwise correlations
-    meanPairCorrAlpha = [meanPairCorrAlpha; squeeze(mVars.meanPairCorr(:,1,:))];
-    meanPairCorrBeta  = [meanPairCorrBeta; squeeze(mVars.meanPairCorr(:,2,:))];
-    meanPairCorrGamma = [meanPairCorrGamma; squeeze(mVars.meanPairCorr(:,3,:))];
+    meanPairCorrAlpha = [meanPairCorrAlpha; squeeze(mVars.meanPairCorr(:,2,:))];
+    meanPairCorrBeta  = [meanPairCorrBeta; squeeze(mVars.meanPairCorr(:,3,:))];
+    meanPairCorrGamma = [meanPairCorrGamma; squeeze(mVars.meanPairCorr(:,4,:))];
     meanPairCorrWB    = [meanPairCorrWB; squeeze(mVars.meanPairCorr(:,4,:))];
 
-    medPairCorrAlpha = [medPairCorrAlpha; squeeze(mVars.medPairCorr(:,1,:))];
-    medPairCorrBeta  = [medPairCorrBeta; squeeze(mVars.medPairCorr(:,2,:))];
-    medPairCorrGamma = [medPairCorrGamma; squeeze(mVars.medPairCorr(:,3,:))];
-    medPairCorrWB    = [medPairCorrWB; squeeze(mVars.medPairCorr(:,4,:))];
+    medPairCorrAlpha = [medPairCorrAlpha; squeeze(mVars.medPairCorr(:,2,:))];
+    medPairCorrBeta  = [medPairCorrBeta; squeeze(mVars.medPairCorr(:,3,:))];
+    medPairCorrGamma = [medPairCorrGamma; squeeze(mVars.medPairCorr(:,4,:))];
+    medPairCorrWB    = [medPairCorrWB; squeeze(mVars.medPairCorr(:,5,:))];
 
     meanCorrEnvAlpha = [meanCorrEnvAlpha; squeeze(mVars.meanCorrEnvelope(:,1,:))];
     meanCorrEnvBeta  = [meanCorrEnvBeta; squeeze(mVars.meanCorrEnvelope(:,2,:))];

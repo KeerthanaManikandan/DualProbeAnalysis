@@ -100,6 +100,8 @@ elseif strcmp(monkeyName,'Whiskey') % Whiskey
                                 'MM';'MM';'MM';'MM';'MM';'SS';'SM';'SM';'SM';'SM'];['SS';'SS';'SS';'SS';'SS';'MM';'SM';'MM';...
                                 'SM';'SM';'SM';'SS';'SS';'MM';'MM'];['SS';'SS';'SS';'MM';'MM';'SM';'MM';'MM';'MM';'SM';'MM'];...
                                 ['MM';'MM';'MM';'MM';'MM';'MM';'MM';'MM';'MM';'MM';'MM';'SS';'SS';'SS']};  
+	
+	
 
 end
 end

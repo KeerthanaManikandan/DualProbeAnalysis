@@ -7,13 +7,25 @@ function [probe1Ch,probe2Ch,raw1Ch,raw2Ch,eegCh,scalpEEGCh] = saveLFPDualProbe(m
 
 clc;clear probe1Ch probe2Ch eegCh scalpEEGCh probeCh rawCh raw1Ch raw2Ch
 probe1Ch = []; probe2Ch = []; eegCh = []; scalpEEGCh = [];
+raw1Ch = []; raw2Ch = [];
 
 disp(['Obtaining and processing data for ' monkeyName ' ' expDate ' File: ' num2str(fileNum)]);
-datName = [serverPath expDate '\Electrophysiology\' datFileName num2str(fileNum) ];
+% datName = [serverPath expDate '\Electrophysiology\' datFileName num2str(fileNum) ];
+
+if exist([serverPath expDate '\Electrophysiology\' datFileName num2str(fileNum) '.nev' ],'file')
+    datName = [serverPath expDate '\Electrophysiology\' datFileName num2str(fileNum)];
+
+elseif exist([serverPath expDate '\Electrophysiology\run0' num2str(fileNum) '\' datFileName num2str(fileNum) '.nev'],'file')
+    datName = [serverPath expDate '\Electrophysiology\run0' num2str(fileNum) '\' datFileName num2str(fileNum)];
+end
 
 % Access and open data file
-
-[nsResult,hFile] = ns_OpenFile(datName);
+try
+    [nsResult,hFile] = ns_OpenFile(datName);
+catch
+    disp('Data did not load.... Moving on to the next recording');
+    return;
+end
 
 if ~strcmp(nsResult,'ns_OK')
     datName = [serverPath expDate '\Electrophysiology\run0' num2str(fileNum-1) '\' datFileName num2str(fileNum)];
@@ -99,6 +111,10 @@ if sum(lfpIdx) == 0 && (~strcmp(expDate,'08_08_2022')) % Removing the condition 
 
     uniqueCh = {'A';'B'};
     namesNotListedFlag = 1;
+
+elseif isscalar(uniqueCh) % If only one label was identified
+    uniqueCh = {'A';'B'};
+    namesNotListedFlag = 1;   
 end
 
 % Get the LFP for the probes recorded
@@ -221,5 +237,5 @@ probe2Ch = single(filtfilt(bL,aL,double(probe2Ch)));
 % Remove 60 Hz power line noise from EEG
 eegCh = single(filtfilt(bS,aS,eegCh)); % Bandstop filtering between 57-62 Hz
 
-if ~isempty(scalpEEGCh); scalpEEGCh = filtfilt(bS,aS,scalpEEGCh); end 
+if ~isempty(scalpEEGCh); scalpEEGCh = single(filtfilt(bS,aS,scalpEEGCh)); end 
 end
