@@ -47,7 +47,7 @@ function showExpFit(xVal,yVal,textLocX,textLocY1,textLocY2)
 plot(xVal,yVal,'o','MarkerSize',5,'MarkerFaceColor',[0 0.4470 0.7410]); hold on; box off;
 
 % Fit exponential function
-options  =  optimoptions('lsqcurvefit', 'Display', 'off','Algorithm','levenberg-marquardt');
+options  = optimoptions('lsqcurvefit', 'Display', 'off','Algorithm','levenberg-marquardt');
 modelfun = @(b,x) b(1) * exp(-b(2).*x);
 x0       = double([1 mean(yVal,'omitnan')]); % Set initial values to mean of x for better estimation of model parameters
 beta0    = lsqcurvefit(modelfun,x0,xVal,double(yVal),[],[],options); % Optimize initial values 

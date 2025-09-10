@@ -35,7 +35,7 @@ saveFigureFlag = 1;
 chOutCortex    = 1:3;
 chDeep         = 30:32;
 
-iM = 1; % 1 - Charlie Sheen, 2 - Whiskey
+iM = 2; % 1 - Charlie Sheen, 2 - Whiskey
 switch iM
     case 1
         monkeyName = 'CharlieSheen';
@@ -314,7 +314,7 @@ params.trialave = 0;
 [sos,g] = zp2sos(z,p,k);
 
 bandLabels = {'Theta'; 'Alpha'; 'Beta'; 'Gamma';'Spiking'};
-if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.mat'],'file')|| 1
+if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.mat'],'file') 
     tic; % re-run for Whiskey... 
     for iDate = 1: size(allDates,1)
         clear expDate datFileNum saveFolder
@@ -672,7 +672,7 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.m
         'infraASuperBMidR','infraASuperBDeepR','infraAMidBSuperR','infraAMidBDeepR','infraADeepBSuperR','infraADeepBMidR','removeDataIdx');
 toc;
 else
-    disp('Load saved variables...')
+    disp('Loading saved variables...')
     clear allVars
     allVars = load(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.mat']);
     fieldNames = fieldnames(allVars); 
@@ -802,8 +802,111 @@ for iType = 1:3
     end
 end
 
-%% Plotting superficial, middle, deep correlations
+%% Compile all the scatters into distribution of residuals
+for iTime = 1:3
+    switch iTime
+        case 1
+            vars = medPairCorrR;
+        case 2
+            vars = medCorrEnvelopeR;
+        case 3
+            vars = medCorrInfraSlowR; 
+    end 
+    for iBand = 1:5
+        clear mdl 
+        mdl = fitlm(connValsR,vars(:,iBand));
+        residualSq(:,iBand,iTime) = (mdl.Residuals.Raw).^2;
+    end
+end
 
+% Plot between frequencies for a timescale
+timeLabels = {'Time series','Power','Infraslow'};figure;
+for iTime = 1:3
+    subplot(1,3,iTime);
+    % violinplot([residualSq(:,:,iTime)]);
+    boxplot([residualSq(:,:,iTime)],bandLabels);
+    title(timeLabels{iTime}); ylim([-0.1 0.4]);box off; hold on; 
+    
+    % Show the data points
+    pointSize = size(residualSq(:,:,iTime));
+    x1 = (reshape(repmat(1:5,[pointSize(1) 1]),[pointSize(1)*5 1]));
+    y1 = reshape(squeeze(residualSq(:,:,iTime)),[pointSize(1)*5 1]);
+    s = swarmchart(x1,y1,10,[0 0.4470 0.7410],'filled');
+    s.XJitterWidth = 0.5; box off;
+    % xticks(1:5);%xticklabels({'0.5 mm' ; '1 mm'; '2 mm' ; '3 mm'; '4 mm'});
+end
+
+% Plot between timescales for a frquency
+figure; 
+for iBand = 1:5
+    subplot(2,3,iBand);
+    boxplot([squeeze(residualSq(:,iBand,:))],timeLabels);
+    title(bandLabels{iBand}); ylim([-0.1 0.4]);box off; hold on;
+    [pVal(iBand),~,stats] = anova1(squeeze(residualSq(:,iBand,:)),timeLabels,'off');
+    c{iBand} = multcompare(stats,'Display','off');
+    % Show the data points
+    % pointSize = size(squeeze(residualSq(:,iBand,:)));
+    % x1 = (reshape(repmat(1:5,[pointSize(1) 1]),[pointSize(1)*5 1]));
+    % y1 = reshape(squeeze(residualSq(:,:,iTime)),[pointSize(1)*5 1]);
+    % s = swarmchart(x1,y1,10,[0 0.4470 0.7410],'filled');
+    % s.XJitterWidth = 0.5; box off;
+
+end
+
+%% Rank the pairwise correlations to show the effect of timescales and frequencies
+% Synthesizing time scales....
+% Rank FC values
+connValsRanked = tiedrank(connValsR);
+pairCorrTimeRanked  = tiedrank(medPairCorrR);
+pairCorrEnvRanked   = tiedrank(medCorrEnvelopeR);
+pairCorrInfraRanked = tiedrank(medCorrInfraSlowR);
+
+ratioValsTime     = 1- abs((pairCorrTimeRanked-connValsRanked)./(pairCorrTimeRanked+connValsRanked));
+ratioValsEnvelope = 1- abs((pairCorrEnvRanked-connValsRanked)./(pairCorrEnvRanked+connValsRanked));
+ratioValsInfra    = 1- abs((pairCorrInfraRanked-connValsRanked)./(pairCorrInfraRanked+connValsRanked));
+
+ratioValsTime2     = abs((pairCorrTimeRanked./connValsRanked));%./(pairCorrTimeRanked+connValsRanked));
+ratioValsEnvelope2 = abs((pairCorrEnvRanked./connValsRanked));%./(pairCorrEnvRanked+connValsRanked));
+ratioValsInfra2    = abs((pairCorrInfraRanked./connValsRanked));%./(pairCorrInfraRanked+connValsRanked));
+
+ratioValsTime3     = abs((pairCorrTimeRanked-connValsRanked))./abs(connValsRanked);
+ratioValsEnvelope3 = abs((pairCorrEnvRanked-connValsRanked))./abs(connValsRanked);
+ratioValsInfra3    = abs((pairCorrInfraRanked-connValsRanked))./abs(connValsRanked);
+
+ratioValsTime4     = abs((pairCorrTimeRanked-connValsRanked)).^2./size(connValsR,1);
+ratioValsEnvelope4 = abs((pairCorrEnvRanked-connValsRanked)).^2./size(connValsR,1);
+ratioValsInfra4   = abs((pairCorrInfraRanked-connValsRanked)).^2./size(connValsR,1);
+
+%% 
+[spCorrTime,pTime]    = corr(medPairCorrR,connValsR,'Type','Spearman');
+[spCorrEnvelope,pEnv] = corr(medCorrEnvelopeR,connValsR,'Type','Spearman');
+[spCorrInfra,pInfra]  = corr(medCorrInfraSlowR,connValsR,'Type','Spearman');
+
+figure; bar([spCorrTime spCorrEnvelope spCorrInfra]); legend('Time series','Envelope','Infraslow','Location','northeast');
+% figure; boxplot([ratioValsTime ratioValsEnvelope ratioValsInfra]);
+
+timeVal  = abs(medPairCorrR.*connValsR);
+powerVal = abs(medCorrEnvelopeR.*connValsR);
+infraVal = abs(medCorrInfraSlowR.*connValsR);
+
+
+%% Principal components to project pairwise correlations and FC onto a common axis
+gammaTimeVals = [medPairCorrR(:,4) connValsR];
+gammaPowVals  = [medCorrEnvelopeR(:,4) connValsR ];
+gammaInfra    = [medCorrInfraSlowR(:,4),connValsR];
+
+
+[coeffTime,scoreTime, ~,~,expTime] = pca(gammaTimeVals);
+[coeffPow,scorePow, ~,~,expPow] = pca(gammaPowVals);
+[coeffInfra ,scoreInfra , ~,~,expInfra ] = pca(gammaInfra);
+
+figure; boxplot([scoreTime(:,1) scorePow(:,1) scoreInfra(:,1)]);
+
+allVars = [medPairCorrR(:,4) medCorrEnvelopeR(:,4) medCorrInfraSlowR(:,4) connValsR distValsR];
+[coeffAll ,scoreAll , ~,~,expAll ] = pca(allVars);
+
+
+%% Plotting superficial, middle, deep correlations
 showScatterPlotsLayers(connValsR,medPairCorrSuperR,medPairCorrMidR,medPairCorrDeepR,...
     envelopePairCorrSuperR,envelopePairCorrMidR,envelopePairCorrDeepR,...
     infraPairCorrSuperR,infraPairCorrMidR,infraPairCorrDeepR,...
@@ -837,33 +940,227 @@ connValsNew = [connValsR;connValsR];
 for iPlot = 1: 3
     switch iPlot
         case 1
-            yValsSuperMid  = [medPairASuperBMidR ;medPairAMidBSuperR];
-            yValsSuperDeep = [medPairASuperBDeepR; medPairADeepBSuperR];
-            yValsMidDeep   = [medPairAMidBDeepR; medPairADeepBMidR];
-            typeVal        = 'Time series';
+            yValsSuperMid   = [medPairASuperBMidR ;medPairAMidBSuperR];
+            yValsSuperDeep  = [medPairASuperBDeepR; medPairADeepBSuperR];
+            yValsMidDeep    = [medPairAMidBDeepR; medPairADeepBMidR];
+            yValsSuperSuper = medPairCorrSuperR;
+            yValsDeepDeep   = medPairCorrDeepR;
+            yValsMidMid     = medPairCorrMidR;
+            typeVal         = 'Time series';
 
         case 2
-            yValsSuperMid  = [envelopeASuperBMidR; envelopeAMidBSuperR];
-            yValsSuperDeep = [envelopeASuperBDeepR; envelopeADeepBSuperR];
-            yValsMidDeep   = [envelopeAMidBDeepR;  envelopeADeepBMidR];
-            typeVal        = 'Envelope';
+            yValsSuperMid   = [envelopeASuperBMidR; envelopeAMidBSuperR];
+            yValsSuperDeep  = [envelopeASuperBDeepR; envelopeADeepBSuperR];
+            yValsMidDeep    = [envelopeAMidBDeepR;  envelopeADeepBMidR];
+            yValsSuperSuper = envelopePairCorrSuperR;
+            yValsDeepDeep   = envelopePairCorrDeepR;
+            yValsMidMid     = envelopePairCorrMidR;
+            typeVal         = 'Envelope';
         case 3
-            yValsSuperMid  = [infraASuperBMidR; infraAMidBSuperR];
-            yValsSuperDeep = [infraASuperBDeepR; infraADeepBSuperR];
-            yValsMidDeep   = [infraAMidBDeepR;  infraADeepBMidR];
-            typeVal        = 'Infraslow';
+            yValsSuperMid   = [infraASuperBMidR; infraAMidBSuperR];
+            yValsSuperDeep  = [infraASuperBDeepR; infraADeepBSuperR];
+            yValsMidDeep    = [infraAMidBDeepR;  infraADeepBMidR];
+            yValsSuperSuper = infraPairCorrSuperR;
+            yValsDeepDeep   = infraPairCorrDeepR;
+            yValsMidMid     = infraPairCorrMidR;
+            typeVal         = 'Infraslow';
     end
+
+    % figure;%('position',[932,103,709,838]);
+    corrSuperMid(:,iPlot)  = corr(yValsSuperMid,connValsNew);
+    corrSuperDeep(:,iPlot) = corr(yValsSuperDeep,connValsNew);
+    corrMidDeep(:,iPlot) = corr(yValsMidDeep,connValsNew);
+
+    corrSuperSuper(:,iPlot) = corr(yValsSuperSuper,connValsR);
+    corrDeepDeep(:,iPlot) = corr(yValsDeepDeep,connValsR);
+    corrMidMid(:,iPlot) = corr(yValsMidMid,connValsR);
+
+
+    % idx = 1; 
+    % for iBand = 1:5 % Feedforward
+    %     subplot(2,5,idx); showLinearFit(connValsNew,yValsSuperMid(:,iBand),0.8,-0.5,-0.4);
+    %     title([bandLabels{iBand} ' - Super x Middle ']); xlim([-0.6 1]); ylim([-0.6 1]); axis square;
+    % 
+    %     subplot(2,5,idx+5); showLinearFit(connValsNew,yValsMidDeep(:,iBand),0.8,-0.5,-0.4);
+    %     title([bandLabels{iBand} ' - Deep  x Middle ']);xlim([-0.6 1]); ylim([-0.6 1]);axis square;
+    % 
+    %     if iBand==1; xlabel('Functional connectivity'); ylabel('Pairwise correlations');end
+    %     sgtitle(['Feedforward: ' typeVal]);
+    %     % [rhoValSM(iPlot,iBand),pValSM(iType,iBand)] = partialcorr(connValsNew,yValsSuperMid(:,iBand),distValsR);
+    %     % [rhoValSD(iPlot,iBand),pValSD(iType,iBand)] = partialcorr(connValsNew,yValsSuperDeep(:,iBand),distValsR);
+    %     % [rhoValMD(iPlot,iBand),pValMD(iType,iBand)] = partialcorr(connValsNew,yValsMidDeep(:,iBand),distValsR);
+    %     idx = idx+1;
+    %     % if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\Results\BetweenCompartmentFigs'],'dir')
+    %     %     [~,~]= mkdir(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\Results\BetweenCompartmentFigs']);
+    %     % end
+    %     % f = gcf;
+    %     % exportgraphics(f,['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\Results\BetweenCompartmentFigs\' bandLabels{iBand} '-' typeVal '.png'],'Resolution',300);
+    %     % close gcf;
+    % 
+    % end
+
+    % figure; idx = 1; 
+    % for iBand = 1:5 % Feedback
+    %     subplot(3,5,idx); showLinearFit(connValsNew,yValsSuperDeep(:,iBand),0.8,-0.5,-0.4);
+    %     title([bandLabels{iBand} ' - Super x Deep']);xlim([-0.6 1]); ylim([-0.6 1]);axis square;
+    % 
+    %     subplot(3,5,idx+5); showLinearFit(connValsR,yValsSuperSuper(:,iBand),0.8,-0.5,-0.4);
+    %     title([bandLabels{iBand} ' - Super x Super ']); xlim([-0.6 1]); ylim([-0.6 1]); axis square;
+    % 
+    %     subplot(3,5,idx+10); showLinearFit(connValsR,yValsDeepDeep(:,iBand),0.8,-0.5,-0.4);
+    %     title([bandLabels{iBand} ' - Deep  x Deep ']);xlim([-0.6 1]); ylim([-0.6 1]);axis square;
+    % 
+    %     if iBand==1; xlabel('Functional connectivity'); ylabel('Pairwise correlations');end
+    %     sgtitle(['Feedback: ' typeVal]);
+    % 
+    %     % [rhoValSM(iPlot,iBand),pValSM(iType,iBand)] = partialcorr(connValsNew,yValsSuperMid(:,iBand),distValsR);
+    %     % [rhoValSD(iPlot,iBand),pValSD(iType,iBand)] = partialcorr(connValsNew,yValsSuperDeep(:,iBand),distValsR);
+    %     % [rhoValMD(iPlot,iBand),pValMD(iType,iBand)] = partialcorr(connValsNew,yValsMidDeep(:,iBand),distValsR);
+    %     idx = idx+1;
+    %     % if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\Results\BetweenCompartmentFigs'],'dir')
+    %     %     [~,~]= mkdir(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\Results\BetweenCompartmentFigs']);
+    %     % end
+    %     % f = gcf;
+    %     % exportgraphics(f,['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\Results\BetweenCompartmentFigs\' bandLabels{iBand} '-' typeVal '.png'],'Resolution',300);
+    %     % close gcf;
+    % 
+    % end
+end
+typeLabel = {'Time series','Power','Infraslow'};
+% figure;
+% subplot(321); imagesc(corrSuperMid);   title('Super x Middle');  yticklabels(bandLabels); xticks(1:3); xticklabels(typeLabel); clim([-0.2 0.5]); colormap jet; axis square; colorbar;
+% subplot(322); imagesc(corrSuperDeep);  title('Super x Deep');    yticklabels(bandLabels); xticks(1:3); xticklabels(typeLabel); clim([-0.2 0.5]); colormap jet; axis square; colorbar;
+% subplot(323); imagesc(corrMidDeep);    title('Deep x Middle');   yticklabels(bandLabels); xticks(1:3); xticklabels(typeLabel); clim([-0.2 0.5]); colormap jet; axis square; colorbar;
+% subplot(324); imagesc(corrSuperSuper); title('Super x Super');   yticklabels(bandLabels); xticks(1:3); xticklabels(typeLabel); clim([-0.2 0.5]); colormap jet; axis square; colorbar;
+% subplot(325); imagesc(corrDeepDeep);   title('Middle x Middle'); yticklabels(bandLabels); xticks(1:3); xticklabels(typeLabel); clim([-0.2 0.5]); colormap jet; axis square; colorbar;
+% subplot(326); imagesc(corrMidMid);     title('Deep x Deep');     yticklabels(bandLabels); xticks(1:3); xticklabels(typeLabel); clim([-0.2 0.5]); colormap jet; axis square; colorbar;
+
+figure;
+subplot(321); imagesc(imgaussfilt(corrSuperMid));   title('Super x Middle');  yticklabels(bandLabels); xticks(1:3); xticklabels(typeLabel); clim([-0.2 0.5]); colormap jet; axis square; colorbar;
+subplot(322); imagesc(imgaussfilt(corrSuperDeep));  title('Super x Deep');    yticklabels(bandLabels); xticks(1:3); xticklabels(typeLabel); clim([-0.2 0.5]); colormap jet; axis square; colorbar;
+subplot(323); imagesc(imgaussfilt(corrMidDeep));    title('Deep x Middle');   yticklabels(bandLabels); xticks(1:3); xticklabels(typeLabel); clim([-0.2 0.5]); colormap jet; axis square; colorbar;
+subplot(324); imagesc(imgaussfilt(corrSuperSuper)); title('Super x Super');   yticklabels(bandLabels); xticks(1:3); xticklabels(typeLabel); clim([-0.2 0.5]); colormap jet; axis square; colorbar;
+subplot(325); imagesc(imgaussfilt(corrDeepDeep));   title('Middle x Middle'); yticklabels(bandLabels); xticks(1:3); xticklabels(typeLabel); clim([-0.2 0.5]); colormap jet; axis square; colorbar;
+subplot(326); imagesc(imgaussfilt(corrMidMid));     title('Deep x Deep');     yticklabels(bandLabels); xticks(1:3); xticklabels(typeLabel); clim([-0.2 0.5]); colormap jet; axis square; colorbar;
+
+% subplot(321); bar(corrSuperMid);legend('Time series','Envelope','Infraslow','Location','northeast'); box off; title('Super x Middle'); xticklabels(bandLabels); ylim([-0.2 0.5]);
+% subplot(322); bar(corrSuperDeep);legend('Time series','Envelope','Infraslow','Location','northeast'); box off; title('Super x Deep'); xticklabels(bandLabels);ylim([-0.2 0.5]);
+% subplot(323); bar(corrMidDeep);legend('Time series','Envelope','Infraslow','Location','northeast'); box off; title('Deep x Middle'); xticklabels(bandLabels);ylim([-0.2 0.5]);
+% subplot(324); bar(corrSuperSuper);legend('Time series','Envelope','Infraslow','Location','northeast'); box off; title('Super x Super'); xticklabels(bandLabels);ylim([-0.2 0.5]);
+% subplot(325); bar(corrDeepDeep);legend('Time series','Envelope','Infraslow','Location','northeast'); box off; title('Middle x Middle'); xticklabels(bandLabels);ylim([-0.2 0.5]);
+% subplot(326); bar(corrMidMid);legend('Time series','Envelope','Infraslow','Location','northeast'); box off; title('Deep x Deep'); xticklabels(bandLabels);ylim([-0.2 0.5]);
+
+%% Plot the distributions of pairwise correlations  
+plotIdx =1; figure;
+for iPlot = 1: 3
+    switch iPlot
+        case 1
+            yValsSuperMid   = [medPairASuperBMidR ;medPairAMidBSuperR];
+            yValsSuperDeep  = [medPairASuperBDeepR; medPairADeepBSuperR];
+            yValsMidDeep    = [medPairAMidBDeepR; medPairADeepBMidR];
+            yValsSuperSuper = [medPairCorrSuperR; NaN(size(medPairCorrSuperR))];
+            yValsDeepDeep   = [medPairCorrDeepR;NaN(size(medPairCorrSuperR))];
+            yValsMidMid     = [medPairCorrMidR;NaN(size(medPairCorrSuperR))];
+            typeVal         = 'Time series';
+
+        case 2
+            yValsSuperMid   = [envelopeASuperBMidR; envelopeAMidBSuperR];
+            yValsSuperDeep  = [envelopeASuperBDeepR; envelopeADeepBSuperR];
+            yValsMidDeep    = [envelopeAMidBDeepR;  envelopeADeepBMidR];
+            yValsSuperSuper = [envelopePairCorrSuperR;NaN(size(medPairCorrSuperR))];
+            yValsDeepDeep   = [envelopePairCorrDeepR;NaN(size(medPairCorrSuperR))];
+            yValsMidMid     = [envelopePairCorrMidR;NaN(size(medPairCorrSuperR))];
+            typeVal         = 'Envelope';
+        case 3
+            yValsSuperMid   = [infraASuperBMidR; infraAMidBSuperR];
+            yValsSuperDeep  = [infraASuperBDeepR; infraADeepBSuperR];
+            yValsMidDeep    = [infraAMidBDeepR;  infraADeepBMidR];
+            yValsSuperSuper = [infraPairCorrSuperR;NaN(size(medPairCorrSuperR))];
+            yValsDeepDeep   = [infraPairCorrDeepR;NaN(size(medPairCorrSuperR))];
+            yValsMidMid     = [infraPairCorrMidR;NaN(size(medPairCorrSuperR))];
+            typeVal         = 'Infraslow';
+    end
+
+     subplot(1,3,iPlot); boxplot([yValsSuperMid(:,iBand) yValsSuperDeep(:,iBand) yValsMidDeep(:,iBand)...
+            yValsSuperSuper(:,iBand) yValsMidMid(:,iBand) yValsDeepDeep(:,iBand)],{'Super x Middle',...
+            'Super x Deep','Middle x Deep','Super x Super','Mid x Mid', 'Deep x Deep'});
+        title([typeVal '- ' bandLabels{iBand}]); box off; ylim([-0.6 1]);
+
+    % for iBand = 1:5
+    %     subplot(3,5,plotIdx); boxplot([yValsSuperMid(:,iBand) yValsSuperDeep(:,iBand) yValsMidDeep(:,iBand)...
+    %         yValsSuperSuper(:,iBand) yValsMidMid(:,iBand) yValsDeepDeep(:,iBand)],{'Super x Middle',...
+    %         'Super x Deep','Middle x Deep','Super x Super','Mid x Mid', 'Deep x Deep'});
+    %     title([typeVal '- ' bandLabels{iBand}]); box off; ylim([-0.6 1]);
+    %     plotIdx = plotIdx+1;
+    % end
+end
+
+%% Plot the between compartment correlations
+distValsNew = [distValsR;distValsR];
+for iPlot = 1: 3
+    switch iPlot
+        case 1
+            yValsSuperMid   = [medPairASuperBMidR ;medPairAMidBSuperR];
+            yValsSuperDeep  = [medPairASuperBDeepR; medPairADeepBSuperR];
+            yValsMidDeep    = [medPairAMidBDeepR; medPairADeepBMidR];
+            yValsSuperSuper = medPairCorrSuperR;
+            yValsDeepDeep   = medPairCorrDeepR;
+            typeVal         = 'Time series';
+
+        case 2
+            yValsSuperMid   = [envelopeASuperBMidR; envelopeAMidBSuperR];
+            yValsSuperDeep  = [envelopeASuperBDeepR; envelopeADeepBSuperR];
+            yValsMidDeep    = [envelopeAMidBDeepR;  envelopeADeepBMidR];
+            yValsSuperSuper = envelopePairCorrSuperR;
+            yValsDeepDeep   = envelopePairCorrDeepR;
+            typeVal         = 'Envelope';
+        case 3
+            yValsSuperMid   = [infraASuperBMidR; infraAMidBSuperR];
+            yValsSuperDeep  = [infraASuperBDeepR; infraADeepBSuperR];
+            yValsMidDeep    = [infraAMidBDeepR;  infraADeepBMidR];
+            yValsSuperSuper = infraPairCorrSuperR;
+            yValsDeepDeep   = infraPairCorrDeepR;
+            typeVal         = 'Infraslow';
+    end
+
     figure;%('position',[932,103,709,838]);
-    idx = 1; 
-    for iBand = 1:5
-        subplot(3,5,idx); showLinearFit(connValsNew,yValsSuperMid(:,iBand),0.8,-0.5,-0.4);
-        title([bandLabels{iBand} ' - Super x Middle ']); xlim([-0.6 1]); ylim([-0.6 1]); axis square;
-        subplot(3,5,idx+5); showLinearFit(connValsNew,yValsSuperDeep(:,iBand),0.8,-0.5,-0.4);
-        title([bandLabels{iBand} ' - Super  x Deep ']);xlim([-0.6 1]); ylim([-0.6 1]);axis square;
-        subplot(3,5,idx+10); showLinearFit(connValsNew,yValsMidDeep(:,iBand),0.8,-0.5,-0.4);
-        title([bandLabels{iBand} ' - Middle  x Deep']);xlim([-0.6 1]); ylim([-0.6 1]);axis square;
+    % idx = 1; 
+    % for iBand = 1:5 % Feedforward
+    %     subplot(2,5,idx); showExpFit(distValsNew,yValsSuperMid(:,iBand),12,-0.5,-0.4);
+    %     title([bandLabels{iBand} ' - Super x Middle ']); xlim([0 20]); ylim([-0.6 1]); axis square;
+    % 
+    %     subplot(2,5,idx+5); showExpFit(distValsNew,yValsMidDeep(:,iBand),12,-0.5,-0.4);
+    %     title([bandLabels{iBand} ' - Deep  x Middle ']);xlim([0 20]); ylim([-0.6 1]);axis square;
+    % 
+    %     if iBand==1; xlabel('Functional connectivity'); ylabel('Pairwise correlations');end
+    %     sgtitle(['Feedforward: ' typeVal]);
+    %     % [rhoValSM(iPlot,iBand),pValSM(iType,iBand)] = partialcorr(connValsNew,yValsSuperMid(:,iBand),distValsR);
+    %     % [rhoValSD(iPlot,iBand),pValSD(iType,iBand)] = partialcorr(connValsNew,yValsSuperDeep(:,iBand),distValsR);
+    %     % [rhoValMD(iPlot,iBand),pValMD(iType,iBand)] = partialcorr(connValsNew,yValsMidDeep(:,iBand),distValsR);
+    %     idx = idx+1;
+    %     % if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\Results\BetweenCompartmentFigs'],'dir')
+    %     %     [~,~]= mkdir(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\Results\BetweenCompartmentFigs']);
+    %     % end
+    %     % f = gcf;
+    %     % exportgraphics(f,['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\Results\BetweenCompartmentFigs\' bandLabels{iBand} '-' typeVal '.png'],'Resolution',300);
+    %     % close gcf;
+    % 
+    % end
+
+    figure; idx = 1; 
+    for iBand = 1:5 % Feedback
+        subplot(3,5,idx); showExpFit(distValsNew,yValsSuperDeep(:,iBand),12,-0.5,-0.4);
+        title([bandLabels{iBand} ' - Super x Deep']);xlim([0 20]); ylim([-0.6 1]);axis square;
+
+        subplot(3,5,idx+5); showExpFit(distValsR,yValsSuperSuper(:,iBand),12,-0.5,-0.4);
+        title([bandLabels{iBand} ' - Super x Super ']); xlim([0 20]); ylim([-0.6 1]); axis square;
+
+        subplot(3,5,idx+10); showExpFit(distValsR,yValsDeepDeep(:,iBand),12,-0.5,-0.4);
+        title([bandLabels{iBand} ' - Deep  x Deep ']);xlim([0 20]); ylim([-0.6 1]);axis square;
+
         if iBand==1; xlabel('Functional connectivity'); ylabel('Pairwise correlations');end
-        sgtitle(typeVal);
+        sgtitle(['Feedback: ' typeVal]);
+
         % [rhoValSM(iPlot,iBand),pValSM(iType,iBand)] = partialcorr(connValsNew,yValsSuperMid(:,iBand),distValsR);
         % [rhoValSD(iPlot,iBand),pValSD(iType,iBand)] = partialcorr(connValsNew,yValsSuperDeep(:,iBand),distValsR);
         % [rhoValMD(iPlot,iBand),pValMD(iType,iBand)] = partialcorr(connValsNew,yValsMidDeep(:,iBand),distValsR);
@@ -877,49 +1174,6 @@ for iPlot = 1: 3
 
     end
 end
-
-%%
-
-for iType = 1:3
-    switch iType
-        case 1
-            plotValSuper   = medPairCorrSuperR;
-            plotValMid     = medPairCorrMidR;
-            plotValDeep    = medPairCorrDeepR;
-            plotLabel = 'Timeseries';
-        case 2
-            plotValSuper = envelopePairCorrSuperR;
-            plotValMid   = envelopePairCorrMidR;
-            plotValDeep  = envelopePairCorrDeepR;
-            plotLabel = 'Envelope';
-        case 3
-            plotValSuper   = infraPairCorrSuperR;
-            plotValMid     = infraPairCorrMidR;
-            plotValDeep    = infraPairCorrDeepR;
-            plotLabel = 'Infraslow';
-    end
-
-    for iBand = 4%1:5
-        figure;
-        subplot(3,1,1);
-        showLinearFit(connValsR,plotValSuper(:,iBand),0.8,-0.5,-0.4); title('Superficial'); axis square;
-        xlim([-0.6 1]); ylim([-0.6 1]); box off; xlabel('Functional connectivity'); ylabel('Pairwise correlations');
-
-
-        subplot(312);showLinearFit(connValsR,plotValMid(:,iBand),0.8,-0.5,-0.4); title('Middle'); axis square;
-        xlim([-0.6 1]); ylim([-0.6 1]); box off;    
-
-
-        subplot(313); showLinearFit(connValsR,plotValDeep(:,iBand),0.8,-0.5,-0.4);title('Deep'); axis square;
-        xlim([-0.6 1]); ylim([-0.6 1]); box off;
-        xlabel('Functional connectivity'); ylabel('Pairwise correlations');
-        sgtitle([plotLabel '-' bandLabels{iBand}]);       
-    end
-
-
-end
-% sgtitle(figTitle);
-
 
 %% Multivariate regression
 %% Partial correlation calculations
@@ -1287,6 +1541,7 @@ for iBand = 1:5
     end
 end
 end
+
 %% Function to fit a line
 function showLinearFit(xVal,yVal,textLocX,textLocY1,textLocY2)
 plot(xVal,yVal,'o','MarkerSize',5,'MarkerFaceColor',[0 0.4470 0.7410]); hold on; box off;
@@ -1303,9 +1558,9 @@ function showExpFit(xVal,yVal,textLocX,textLocY1,textLocY2)
 plot(xVal,yVal,'o','MarkerSize',5,'MarkerFaceColor',[0 0.4470 0.7410]); hold on; box off;
 
 % Fit exponential function
-options  = optimoptions('lsqcurvefit', 'Display', 'off');
+options  = optimoptions('lsqcurvefit', 'Display', 'off','Algorithm','levenberg-marquardt');
 modelfun = @(b,x) b(1) * exp(-b(2).*x);
-x0       = [100 -1 ];
+x0       = double([1 mean(yVal,'omitnan')]); % Set initial values to mean of x for better estimation of model parameters
 beta0    = lsqcurvefit(modelfun,x0,xVal,double(yVal),[],[],options); % Optimize initial values 
 
 mdl = fitnlm(xVal,yVal, modelfun, beta0);

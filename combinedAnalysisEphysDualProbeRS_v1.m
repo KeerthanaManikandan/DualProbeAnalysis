@@ -23,6 +23,7 @@ distVals = [allMonkeyVars(1).distValsR; allMonkeyVars(2).distValsR];
 medPairCorr      = [allMonkeyVars(1).medPairCorrR; allMonkeyVars(2).medPairCorrR];
 medEnvelopeCorr  = [allMonkeyVars(1).medCorrEnvelopeR; allMonkeyVars(2).medCorrEnvelopeR];
 medInfraSlowCorr = [allMonkeyVars(1).medCorrInfraSlowR; allMonkeyVars(2).medCorrInfraSlowR];
+
 %%
 showScatterPlots(connVals,medPairCorr,medEnvelopeCorr,medInfraSlowCorr,...
     'Functional Connectivity','Pairwise correlations',[-0.6 1],[-0.6 1],...
