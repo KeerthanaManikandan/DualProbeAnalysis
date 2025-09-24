@@ -22,6 +22,7 @@ for iType = 1:3
             showExpFit(xVal,plotVal(:,iBand),textLocX,textLocY1,textLocY2)
         else
             showLinearFit(xVal,plotVal(:,iBand),textLocX,textLocY1,textLocY2)
+             % showLinearFit(plotVal(:,iBand),xVal,textLocX,textLocY1,textLocY2)
         end
         xlim(xLim); ylim(yLim); box off;
         xlabel(xLabel); ylabel(yLabel);
