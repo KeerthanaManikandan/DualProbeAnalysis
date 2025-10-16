@@ -796,14 +796,14 @@ gammaBand = [30 90]; [bG,aG] = butter(3,gammaBand./(fs/2),'bandpass');
 % Check if certain variables are stored....
 if exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.mat'],'file') 
     varInfo = who('-file',['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.mat']);
-    varIdx  = ismember('medPairCorrFreq',varInfo);
+    varIdx  = ismember('medPairCorrFreqPower',varInfo);
 else 
     varIdx = 1;
 end
 % Get the combination
 freqCombs = nchoosek(1:size(bandLabels,2),2);
 
-% Calculate pairwise correlations between and within probes
+%% Calculate pairwise correlations between and within probes
 if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.mat'],'file') || ~varIdx
     tic; 
     for iDate = 1: size(allDates,1)
@@ -846,10 +846,6 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.m
                 medPairCorrFreqTime(1:size(freqCombs,2),iDate,iRun)= NaN;
                 medPairCorrFreqPower(1:size(freqCombs,2),iDate,iRun)= NaN;
                 medPairCorrFreqInfra(1:size(freqCombs,2),iDate,iRun)= NaN;
-
-                % medPACFreqTime(1:size(freqCombs,2),iDate,iRun)= NaN;
-                % medPACFreqPower(1:size(freqCombs,2),iDate,iRun)= NaN;
-                % medPACFreqInfra(1:size(freqCombs,2),iDate,iRun)= NaN;
                 
                 continue;
             end
@@ -883,11 +879,14 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.m
                 end
 
                 medPairCorrFreqTime(iComb,iDate,iRun) = median([corr(squeeze(pAFreq(:,:,1)),squeeze(pBFreq(:,:,2))) corr(squeeze(pAFreq(:,:,2)),squeeze(pBFreq(:,:,1)))],'all','omitnan');
-              
+                medPairCorrFreqTimeIntraA(iComb,iDate,iRun) = median(corr(squeeze(pAFreq(:,:,1)),squeeze(pAFreq(:,:,2))),'all','omitnan');
+                medPairCorrFreqTimeIntraB(iComb,iDate,iRun) = median(corr(squeeze(pBFreq(:,:,1)),squeeze(pBFreq(:,:,2))),'all','omitnan');
 
                 % Correlate instantaneous band power
                 medPairCorrFreqPower(iComb,iDate,iRun) = median([corr(squeeze(envelopeABand(:,:,1)),squeeze(envelopeBBand(:,:,2))) corr(squeeze(envelopeABand(:,:,2)),squeeze(envelopeBBand(:,:,1)))],'all','omitnan');
-
+                medPairCorrFreqPowerIntraA(iComb,iDate,iRun) = median(corr(squeeze(envelopeABand(:,:,1)),squeeze(envelopeABand(:,:,2))) ,'all','omitnan');
+                medPairCorrFreqPowerIntraB(iComb,iDate,iRun) = median(corr(squeeze(envelopeBBand(:,:,1)),squeeze(envelopeBBand(:,:,2))) ,'all','omitnan');
+               
                 enSizeA = size(envelopeABand);
                 enSizeB = size(envelopeBBand);
 
@@ -902,11 +901,15 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.m
 
                 % Correlate infraslow flucutuations in instantaneous band power
                 medPairCorrFreqInfra(iComb,iDate,iRun) =  median([corr(squeeze(infraSlowA(:,:,1)),squeeze(infraSlowB(:,:,2))) corr(squeeze(infraSlowA(:,:,2)),squeeze(infraSlowB(:,:,1)))],'all','omitnan');
+                medPairCorrFreqInfraIntraA(iComb,iDate,iRun) =  median(corr(squeeze(infraSlowA(:,:,1)),squeeze(infraSlowA(:,:,2))),'all','omitnan');
+                medPairCorrFreqInfraIntraB(iComb,iDate,iRun) =  median(corr(squeeze(infraSlowB(:,:,1)),squeeze(infraSlowB(:,:,2))),'all','omitnan');
             end
         end
     end
     
-    save(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.mat'],'medPairCorrFreqTime','-append');
+    save(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.mat'],'medPairCorrFreqTime','medPairCorrFreqTimeIntraA','medPairCorrFreqTimeIntraB',...
+        'medPairCorrFreqPower','medPairCorrFreqPowerIntraA','medPairCorrFreqPowerIntraB','medPairCorrFreqInfra','medPairCorrFreqInfraIntraA',...
+        'medPairCorrFreqInfraIntraB','-append');
 
 toc;
 else
@@ -922,17 +925,46 @@ else
     clear allVars;
 end
 
+% Time series
 medPairCorrFreqTimeR = reshape(medPairCorrFreqTime,[size(medPairCorrFreqInfra,1) size(medPairCorrFreqInfra,2)*size(medPairCorrFreqInfra,3)]); 
 medPairCorrFreqTimeR(:,removeDataIdx)          = [];
 medPairCorrFreqTimeR(:,~goodRunsR) = [];
 
+medPairCorrFreqTimeIntraAR = reshape(medPairCorrFreqTimeIntraA,[size(medPairCorrFreqInfra,1) size(medPairCorrFreqInfra,2)*size(medPairCorrFreqInfra,3)]); 
+medPairCorrFreqTimeIntraAR(:,removeDataIdx)          = [];
+medPairCorrFreqTimeIntraAR(:,~goodRunsR) = [];
+
+medPairCorrFreqTimeIntraBR = reshape(medPairCorrFreqTimeIntraB,[size(medPairCorrFreqInfra,1) size(medPairCorrFreqInfra,2)*size(medPairCorrFreqInfra,3)]); 
+medPairCorrFreqTimeIntraBR(:,removeDataIdx)          = [];
+medPairCorrFreqTimeIntraBR(:,~goodRunsR) = [];
+
+% Power
 medPairCorrFreqPowerR = reshape(medPairCorrFreqPower,[size(medPairCorrFreqInfra,1) size(medPairCorrFreqInfra,2)*size(medPairCorrFreqInfra,3)]); 
 medPairCorrFreqPowerR(:,removeDataIdx)          = [];
 medPairCorrFreqPowerR(:,~goodRunsR) = [];
 
+medPairCorrFreqPowerIntraAR = reshape(medPairCorrFreqPowerIntraA,[size(medPairCorrFreqInfra,1) size(medPairCorrFreqInfra,2)*size(medPairCorrFreqInfra,3)]); 
+medPairCorrFreqPowerIntraAR(:,removeDataIdx)          = [];
+medPairCorrFreqPowerIntraAR(:,~goodRunsR) = [];
+
+medPairCorrFreqPowerIntraBR = reshape(medPairCorrFreqPowerIntraB,[size(medPairCorrFreqInfra,1) size(medPairCorrFreqInfra,2)*size(medPairCorrFreqInfra,3)]); 
+medPairCorrFreqPowerIntraBR(:,removeDataIdx)          = [];
+medPairCorrFreqPowerIntraBR(:,~goodRunsR) = [];
+
+
+% Infraslow 
 medPairCorrFreqInfraR = reshape(medPairCorrFreqInfra,[size(medPairCorrFreqInfra,1) size(medPairCorrFreqInfra,2)*size(medPairCorrFreqInfra,3)]); 
-medPairCorrFreqInfraR(:,removeDataIdx)          = [];
+medPairCorrFreqInfraR(:,removeDataIdx) = [];
 medPairCorrFreqInfraR(:,~goodRunsR) = [];
+
+medPairCorrFreqInfraIntraAR = reshape(medPairCorrFreqInfraIntraA,[size(medPairCorrFreqInfra,1) size(medPairCorrFreqInfra,2)*size(medPairCorrFreqInfra,3)]); 
+medPairCorrFreqInfraIntraAR(:,removeDataIdx) = [];
+medPairCorrFreqInfraIntraAR(:,~goodRunsR) = [];
+
+medPairCorrFreqInfraIntraBR = reshape(medPairCorrFreqInfraIntraB,[size(medPairCorrFreqInfra,1) size(medPairCorrFreqInfra,2)*size(medPairCorrFreqInfra,3)]); 
+medPairCorrFreqInfraIntraBR(:,removeDataIdx) = [];
+medPairCorrFreqInfraIntraBR(:,~goodRunsR) = [];
+
 
 freqCombNames = {'Theta-Alpha','Theta-Beta','Theta-Gamma','Theta-Spiking',...
     'Alpha-Beta','Alpha-Gamma','Alpha-Spiking','Beta-Gamma','Beta-Spiking','Gamma-Spiking'}; 
@@ -941,15 +973,20 @@ for iPlot = 1:3
     switch iPlot 
         case 1
             plotVar = medPairCorrFreqTimeR;
+            intraVar = (medPairCorrFreqTimeIntraAR+ medPairCorrFreqTimeIntraBR)./2;
             plotTitle = 'Time series';
         case 2
             plotVar = medPairCorrFreqPowerR;
+            intraVar = (medPairCorrFreqPowerIntraAR+medPairCorrFreqPowerIntraBR)./2;
             plotTitle = 'Power';
         case 3
-            plotVar = medPairCorrFreqInfraR; 
-            plotTitle = 'Infraslow'; 
+            plotVar = medPairCorrFreqInfraR;
+            intraVar = (medPairCorrFreqInfraIntraAR+ medPairCorrFreqInfraIntraBR)./2;
+            plotTitle = 'Infraslow';
     end
-    % figure; xVal = connValsR; 
+    % 
+    % figure; xVal = connValsR;
+    % 
     % for iFig = 1: size(medPairCorrFreqTimeR,1)
     %     subplot(2,5,iFig);
     %     yVal = plotVar(iFig,:);
@@ -961,38 +998,50 @@ for iPlot = 1:3
     %     text(0.7, 0.35,['R^2 : ' num2str(mdl.Rsquared.Ordinary*100) '%']);
     %     text(0.7, 0.3,['p-val: ' num2str(mdl.Coefficients.pValue(2))]);
     %     title(freqCombNames{iFig}); ylim([-0.4 0.4]); xlim([-0.6 1]); axis square;
-    %     if iFig== 1; xlabel('Functional connectivity'); ylabel('Cross-frequency correlations'); end 
+    %     if iFig== 1; xlabel('Functional connectivity'); ylabel('Cross-frequency correlations'); end
     % end
     % sgtitle(plotTitle);
 
-     figure; xVal = distValsR; 
+    figure;
     for iFig = 1: size(medPairCorrFreqTimeR,1)
         subplot(2,5,iFig);
-        yVal = plotVar(iFig,:)';
-        plot(xVal,yVal,'o','MarkerSize',5,'MarkerFaceColor',[0 0.4470 0.7410]); hold on; box off;
-
-        % Fit exponential function
-        options  = optimoptions('lsqcurvefit', 'Display', 'off','Algorithm','levenberg-marquardt');
-        modelfun = @(b,x) b(1) * exp(-b(2).*x);
-        x0       = double([1 mean(yVal,'omitnan')]); % Set initial values to mean of x for better estimation of model parameters
-        beta0    = lsqcurvefit(modelfun,x0,xVal,double(yVal),[],[],options); % Optimize initial values
-
-        mdl = fitnlm(xVal,yVal, modelfun, beta0);
-        X   = linspace(min(xVal),max(xVal),1000);
-
-        coefficients = mdl.Coefficients{:, 'Estimate'};
-        yFitted      = coefficients(1) * exp(-coefficients(2).*X);
-
-        plot(X,yFitted, '-k', 'LineWidth',1);
-        text(10, 0.35,['R^2 : ' num2str(mdl.Rsquared.Ordinary*100) '%']);
-        text(10, 0.3,['p-val: ' num2str(mdl.Coefficients.pValue(2))]);
-        title(freqCombNames{iFig}); ylim([-0.4 0.4]); xlim([0 20]); axis square;
-        if iFig== 1; xlabel('Distance (mm)'); ylabel('Cross-frequency correlations'); end
+        histogram(intraVar(iFig,:),-0.3:0.05:0.8); box off; xlabel([freqCombNames{iFig} ' correlations']);
+        box off; axis square; xlim([-0.3 1]); xticks(-0.3:0.1:1);
+        if iPlot~=3
+            ylim([0 90]); yticks(0:10:90);
+        else
+            ylim([0 40]); yticks(0:10:40);
+        end
     end
     sgtitle(plotTitle);
+
+
+    %  figure; xVal = distValsR; 
+    % for iFig = 1: size(medPairCorrFreqTimeR,1)
+    %     subplot(2,5,iFig);
+    %     yVal = plotVar(iFig,:)';
+    %     plot(xVal,yVal,'o','MarkerSize',5,'MarkerFaceColor',[0 0.4470 0.7410]); hold on; box off;
+    % 
+    %     % Fit exponential function
+    %     options  = optimoptions('lsqcurvefit', 'Display', 'off','Algorithm','levenberg-marquardt');
+    %     modelfun = @(b,x) b(1) * exp(-b(2).*x);
+    %     x0       = double([1 mean(yVal,'omitnan')]); % Set initial values to mean of x for better estimation of model parameters
+    %     beta0    = lsqcurvefit(modelfun,x0,xVal,double(yVal),[],[],options); % Optimize initial values
+    % 
+    %     mdl = fitnlm(xVal,yVal, modelfun, beta0);
+    %     X   = linspace(min(xVal),max(xVal),1000);
+    % 
+    %     coefficients = mdl.Coefficients{:, 'Estimate'};
+    %     yFitted      = coefficients(1) * exp(-coefficients(2).*X);
+    % 
+    %     plot(X,yFitted, '-k', 'LineWidth',1);
+    %     text(10, 0.35,['R^2 : ' num2str(mdl.Rsquared.Ordinary*100) '%']);
+    %     text(10, 0.3,['p-val: ' num2str(mdl.Coefficients.pValue(2))]);
+    %     title(freqCombNames{iFig}); ylim([-0.4 0.4]); xlim([0 20]); axis square;
+    %     if iFig== 1; xlabel('Distance (mm)'); ylabel('Cross-frequency correlations'); end
+    % end
+    % sgtitle(plotTitle);
 end
-
-
 
 %% Cross-frequency coupling - Phase Amplitude coupling between frequencies
 for iDate = 1: size(allDates,1)
@@ -1000,8 +1049,7 @@ for iDate = 1: size(allDates,1)
     expDate    = allDates(iDate,:);
     datFileNum = datFileNumAll{iDate,1};
 
-    for iRun = 1:length(datFileNum)
-        
+    for iRun = 1:length(datFileNum)        
         fileNum = datFileNum(iRun);
         clear probeA probeB chA chB
 
@@ -1035,7 +1083,123 @@ for iDate = 1: size(allDates,1)
 
         pABeta = single(filtfilt(bB,aB,double(probeA(:,chA(1):chA(2)))));
         pBBeta = single(filtfilt(bB,aB,double(probeB(:,chB(1):chB(2)))));
-      
+        
+           
+      %%  Adding time to data
+      clear modIdx
+        stepLen  = 10e3; % Step length
+        timeLen   = 10e3;
+        % timeLen  = 1:winLen;
+        iL = 1; xtickVals = [];
+        while (timeLen)<=size(pAGamma,1)
+            clear lowFreq higchFreq
+            xtickVals =[xtickVals timeLen/1e3];
+            lowFreq  = pBTheta(1:timeLen,:);
+            highFreq = pAGamma(1:timeLen,:);
+
+            [modIdx(iL,:),~] = getPhaseAmpCoupling(lowFreq,highFreq,0);
+
+            % Increment time 
+            timeLen = timeLen+stepLen;
+            iL = iL+1; 
+        end
+        figure;plot(modIdx,'Color',[0.5 0.5 0.5]);
+        xlabel('Data length (s)');xticks(1:iL); 
+        xticklabels(xtickVals);
+        ax = gca; 
+        labels = string(ax.XAxis.TickLabels); labels(2:2:end) = "";
+        ax.XAxis.TickLabels = labels;
+        ylabel('Modulation Index'); box off;
+
+%% Dividing data into 10 s, and calculating PAC
+      clear modIdx
+        stepLen  = 10e3; % Step length
+        timeLen   = 1:90e3;
+        % timeLen  = 1:winLen;
+        iL = 1; xtickVals = [];
+        while max(timeLen+stepLen)<=size(pAGamma,1)
+            clear lowFreq higchFreq
+            xtickVals =[xtickVals timeLen/1e3];
+            lowFreq  = pATheta(timeLen,:);
+            highFreq = pAGamma(timeLen,:);
+
+            [modIdx(iL,:),~] = getPhaseAmpCoupling(lowFreq,highFreq,0);
+
+            % Increment time 
+            timeLen = timeLen+stepLen;
+            iL = iL+1; 
+        end
+        figure;plot(modIdx,'Color',[0.5 0.5 0.5]);
+        xlabel('Data length (s)');xticks(1:iL); 
+        xticklabels(xtickVals);ylim([0 .5e-3]);
+        ylabel('Modulation Index'); box off;
+
+%% Comodulogram 
+% Low frequency Phase: 1 Hz steps with 2 Hz bandwidth
+% High frequency Amplitude: 2 Hz steps with 4 Hz bandwidth
+clear modIdxAll
+thetaVals  = thetaBand;
+
+alphaRange = alphaBand(1):alphaBand(2);
+alphaRange = alphaRange(2:end);
+alphaVals  = [alphaRange-1; alphaRange+1]';
+
+betaRange = betaBand(1):betaBand(2);
+betaRange = betaRange(2:end);
+betaVals  = [betaRange-1; betaRange+1]';
+
+gammaRange = gammaBand(1):2:gammaBand(2);
+gammaRange(gammaRange>=60 & gammaRange<=65)=[];
+gammaRange = gammaRange(2:end);
+gammaVals = [gammaRange-2; gammaRange+2]';
+tic;
+% Get the signals for these ranges
+for iHigh = 1:size(gammaVals,1)
+    % Filter the high and low frequency signals
+    clear highFreq
+    [bHigh,aHigh] = butter(3,gammaVals(iHigh,:)./(fs/2),'bandpass');
+    highFreq = single(filtfilt(bHigh,aHigh,double(probeA(1:90e3,chA(1):chA(2)))));
+
+    for iFreq = 1:3
+        clear freqVal
+        switch iFreq
+            case 1
+                freqVal = thetaVals;
+            case 2
+                freqVal = alphaVals;
+            case 3
+                freqVal = betaVals;
+        end
+
+        disp(['High: ' num2str(iHigh) ' Freq: ' num2str(iFreq)]);
+       
+        for iLow = 1:size(freqVal,1)
+            clear lowFreq bLow aLow 
+            [bLow,aLow] = butter(3,freqVal(iLow,:)./(fs/2),'bandpass');
+            lowFreq = single(filtfilt(bLow,aLow,double(probeA(1:90e3,chB(1):chB(2)))));
+            [modIdxAll(iFreq,iHigh,iLow,:),~] = getPhaseAmpCoupling(lowFreq,highFreq,0);
+        end
+    end
+end
+
+toc;
+% Rearranging MI 
+thetaCols = squeeze(modIdxAll(1,:,:,:));
+modulogramVals = cat(2,thetaCols(:,1:size(thetaVals,1),:),squeeze(modIdxAll(2,:,1:size(alphaVals,1),:)), ...
+    squeeze(modIdxAll(3,:,1:size(betaVals,1),:)));
+
+figure;imagesc(imgaussfilt(modulogramVals(:,:,15)));
+colormap jet; colorbar; yticks(1:27);yticklabels(gammaRange);
+xticks(1:22);xticklabels([thetaVals(:,1); alphaVals(:,1); betaVals(:,1)]); 
+xlabel('Frequency for phase'); ylabel('Amplitude for gamma');clim([0 1e-5]);
+
+
+%%
+
+
+
+        
+
         for iFreq = 1:3
             clear combVals pAFreq pBFreq envelopeABand envelopeBBand
 
@@ -1050,49 +1214,52 @@ for iDate = 1: size(allDates,1)
                     pAVal = pABeta;
                     pBVal = pBBeta;
             end
-
-            numPoints = size(pAGamma,1);
-            numSurrogate = 200; % to get the joint distribution
-            minSkip  = fs;
-            maxSkip  = numPoints-fs;
-            skip     = ceil(numPoints.*rand(numSurrogate*2,1));
-            skip(skip>maxSkip) = [];
-            skip(skip<minSkip) = [];
-
-            for iRef = 1:2
-                switch iRef
-                    case 1
-                        pRef = pAGamma; 
-                        pMov = pBVal;
-                    case 2
-                        pRef = pBGamma; 
-                        pMov = pAVal; 
-                end
-                clear amplitude phase z surrAmplitude surrogate surrMean surrStd
-                numElec   = min([size(pRef,2) size(pMov,2)]);
-                surrogate = zeros(numSurrogate,numElec);
-
-                % Get analytical signal
-                amplitude = abs(hilbert(pAGamma(:,1:numElec))); % Gamma
-                phase     = angle(hilbert(pBTheta(:,1:numElec))); % Theta
-
-                % Complex valued signal
-                z = amplitude.*exp(1i*phase);
-
-                % Get joint distribution and calculate mean of z to get modulation
-                % index
-                mRaw = mean(z);
-                for iS = 1:numSurrogate
-                    surrAmplitude = [amplitude(skip(iS):end,:); amplitude(1:skip(iS)-1,:)];
-                    surrogate(iS,:) = abs(mean(surrAmplitude.*exp(1i*phase)));
-                end
-
-                % Fit Gaussian to surrogate data
-                [surrMean, surrStd] = normfit(surrogate);
-                mNormLen(iDate,iRun,iRef,iFreq) = median(abs((mRaw)-surrMean)./surrStd);
-                % mNormPhase = angle(mRaw);
-                % mNorm = mNormLen*exp(1i*mNormPhase);
-            end
+            % 
+            % numPoints = size(pAGamma,1);
+            % numSurrogate = 200; % to get the joint distribution
+            % minSkip  = fs;
+            % maxSkip  = numPoints-fs;
+            % skip     = ceil(numPoints.*rand(numSurrogate*2,1));
+            % skip(skip>maxSkip) = [];
+            % skip(skip<minSkip) = [];
+            % 
+            % for iRef = 1:2
+            %     switch iRef
+            %         case 1
+            %             pRef = pAGamma; 
+            %             pMov = pBVal;
+            %         case 2
+            %             pRef = pBGamma; 
+            %             pMov = pAVal; 
+            %     end
+            %     clear amplitude phase z surrAmplitude surrogate surrMean surrStd
+            %     numElec   = min([size(pRef,2) size(pMov,2)]);
+            %     surrogate = zeros(numSurrogate,numElec);
+            % 
+            %     % Get analytical signal
+            %     amplitude = abs(hilbert(pAGamma(:,1:numElec))); % Gamma
+            %     phase     = angle(hilbert(pBTheta(:,1:numElec))); % Theta
+            % 
+            %     % Complex valued signal
+            %     z = amplitude.*exp(1i*phase);
+            % 
+            %     % Get joint distribution and calculate mean of z to get modulation
+            %     % index
+            %     mRaw = mean(z);
+            %     for iS = 1:numSurrogate
+            %         surrAmplitude = [amplitude(skip(iS):end,:); amplitude(1:skip(iS)-1,:)];
+            %         surrogate(iS,:) = abs(mean(surrAmplitude.*exp(1i*phase)));
+            %     end
+            % 
+            %     % Fit Gaussian to surrogate data
+            %     [surrMean, surrStd] = normfit(surrogate);
+            %     mNormLen(iDate,iRun,iRef,iFreq) = median(abs((mRaw)-surrMean)./surrStd);
+            %     % mNormPhase = angle(mRaw);
+            %     % mNorm = mNormLen*exp(1i*mNormPhase);
+            % end
+            
+           
+            
         end
     end
 end
