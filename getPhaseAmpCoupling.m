@@ -1,4 +1,4 @@
-function [modIdx,pj] = getPhaseAmpCoupling(lowFreq,highFreq,plotVar)
+function [modIdx,pj] = getPhaseAmpCoupling(phase,amplitude,plotVar)
 % Calculate the phase amplitude coupling.
 % Based on Tort et al (2010), Journal of Neurophysiology 
 % lowFreq: low frequency timecourse
@@ -6,20 +6,19 @@ function [modIdx,pj] = getPhaseAmpCoupling(lowFreq,highFreq,plotVar)
 % Keerthana Manikandan
 % October 13,2025
 
-% Check if high and low frequency have the same number of channels
-minChannels = min([size(highFreq,2) size(lowFreq,2)]); 
-
-amplitude = abs(hilbert(highFreq(:,1:minChannels)));% Get amplitude of high frequency
-phase     = angle(hilbert(lowFreq(:,1:minChannels))); % Get phase of low frequency
+if nargin<3
+    plotVar = 0; 
+end 
 
 % Divide phase into bins
-[~,edges,bin] = histcounts(rad2deg(phase),'BinMethod','integers','BinEdges',-180:20:180);
+edges       = -180:20:180;
+bin = discretize(phase, edges);
 
 % Get the mean powers for each bin
 n = size(edges,2)-1;
 
 % Reshape 'bin' and 'amplitude' into column vectors
-binCol = bin(:);
+binCol       = bin(:);
 amplitudeCol = amplitude(:);
 
 % Create a grouping index for each column
@@ -32,8 +31,7 @@ pj = accumarray([binCol, groupIdx], amplitudeCol, [], @mean);
 pj = pj./sum(pj,1,'omitnan'); % normalized pac = pj/sum(pj for j= 1:n) % The sum should be equal to 1
 
 % Calculate modulation index
-hp = -sum(pj.*log(pj));
-modIdx = (log(n)-hp)./log(n); 
+modIdx = (log(n)-(-sum(pj.*log(pj))))./log(n); 
 
 % Plotting if desired
 if ~exist('plotVar','var')|| isempty(plotVar)
