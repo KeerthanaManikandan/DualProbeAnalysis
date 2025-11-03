@@ -1,8 +1,8 @@
 function [modIdx,pj] = getPhaseAmpCoupling(phaseVal,amplitudeVal,plotVar)
 % Calculate the phase amplitude coupling.
 % Based on Tort et al (2010), Journal of Neurophysiology 
-% lowFreq: low frequency timecourse
-% highFreq: high frequency timecourse
+% phaseVal: Low frequency phase
+% amplitudeVal: High frequency amplitude
 % Keerthana Manikandan
 % October 13,2025
 

@@ -68,13 +68,13 @@ for iM = 1:2
     end
 
     mVars     = load(['D:\Data\' monkeyName '_SqM\Left Hemisphere\DualProbeVars.mat']);
-    dist      = [dist; mVars.distSitesAll];
-    fcVals    = [fcVals; mVars.connValsAll];
-    pairType  = [pairType; mVars.pairClass];
-    patchInfo = [patchInfo mVars.patchInfo];
+    dist      = [dist; mVars.distValsR];
+    fcVals    = [fcVals; mVars.connValsR];
+    % pairType  = [pairType; mVars.pairClass];
+    % patchInfo = [patchInfo mVars.patchInfo];
 
     if iM == 1; lenBadDat = 0; else ; lenBadDat = size(meanPairCorrAlpha,1); end
-    badDatIdx = [badDatIdx; mVars.nanIdx + lenBadDat];
+    % badDatIdx = [badDatIdx; mVars.nanIdx + lenBadDat];
 
     % Pairwise correlations
     meanPairCorrAlpha = [meanPairCorrAlpha; squeeze(mVars.meanPairCorr(:,2,:))];
