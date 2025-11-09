@@ -317,12 +317,12 @@ bandLabels = {'Theta', 'Alpha', 'Beta', 'Gamma','Spiking'};
 timeLabels = {'Time series','Power','Infraslow'};
 
 % Check if certain variables are stored....
-if exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.mat'],'file') 
-    varInfo = who('-file',['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.mat']);
-    varIdx  = ismember('infraIntraAAllR',varInfo);
-else 
+% if exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.mat'],'file') 
+%     varInfo = who('-file',['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.mat']);
+%     varIdx  = ismember('infraIntraAAllR',varInfo);
+% else 
     varIdx = 1;
-end
+% end
 
 % Calculate pairwise correlations between and within probes
 if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.mat'],'file') || ~varIdx
