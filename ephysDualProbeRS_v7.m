@@ -115,7 +115,7 @@ winSize  = 30e3;
 stepSize = 10e3;
 
 % Get the phase amplitude coupling for the recordings...
-for iDate = 2:3%1:size(allDates,1)
+for iDate = 2:size(allDates,1)
     clear expDate datFileNum saveFolder
     expDate    = allDates(iDate,:);
     datFileNum = datFileNumAll{iDate,1};
@@ -266,24 +266,18 @@ nLow  = size(lowFreqRange,2);
 % shiftLen = [1 5 10 20 50 100].*1e3;
 % nShift   = length(shiftLen);
 
-shiftLen = [0.01 0.1 0.2 0.3 0.4 0.5].*dataLen;
-nShift   = length(shiftLen);
-
-winStart = 1:100e3:(dataLen-100e3);
-winEnd   = winStart+100e3-1;
-nWin     = numel(winStart);
-
-for iDate = 2:3
+for iDate = 6:7
     expDate    = allDates(iDate,:);
     datFileNum = datFileNumAll{iDate,1};
 
     for iRun = 1:length(datFileNum)
-        clc; disp(['Processing data for ' monkeyName ': Date: ' allDates(iDate,:) ' ; File: ' num2str(fileNum)]);
-        if iDate==2 && iRun ==1; continue; end
         fileNum = datFileNum(iRun);
+        clc; disp(['Processing data for ' monkeyName ': Date: ' allDates(iDate,:) ' ; File: ' num2str(fileNum)]);
         chA = estChInCortexA{iDate}(iRun,:);
         chB = estChInCortexB{iDate}(iRun,:);
+        if (iDate==2 && iRun==1) || (iDate==2 && iRun==2)|| (iDate==2 && iRun==3); continue; end
         if chA(1)== 0 || chB(1)==0; continue; end
+
         [amplitudeA, amplitudeB, phaseA, phaseB] = calculatePhaseAmpSignals(monkeyName,expDate,hemisphere,fileNum,...
             allProbeData{fileNum,iDate}.probe1Ch,allProbeData{fileNum,iDate}.probe2Ch,badElecA{fileNum,iDate},...
             badElecB{fileNum,iDate},allBadTimes{fileNum,iDate},estChInCortexA{iDate}(iRun,:),...
@@ -291,23 +285,43 @@ for iDate = 2:3
 
         dataLen = size(amplitudeA,2);
         nChan      = min(size(amplitudeA,3),size(amplitudeB,3));
+
         amplitudeA = amplitudeA(:,:,1:nChan);
         amplitudeB = amplitudeB(:,:,1:nChan);
         phaseA     = phaseA(:,:,1:nChan);
         phaseB     = phaseB(:,:,1:nChan);
 
-        modIdxAllA2BCircleT = NaN(nWin,nHigh,nLow,nChan); % size is shift length x # time windows x high freq x low freq x # channels
-        modIdxAllB2ACircleT = NaN(nWin,nHigh,nLow,nChan);
-        modIdxAllA2ACircleT = NaN(nWin,nHigh,nLow,nChan);
-        modIdxAllB2BCircleT = NaN(nWin,nHigh,nLow,nChan);
+
+        winStart = 1:100e3:(dataLen-100e3);
+        winEnd   = winStart+100e3-1;
+        nWin     = numel(winStart);
+
+        modIdxAllA2BShuffleT = NaN(5,nWin,nHigh,nLow,nChan); % size is shift length x # time windows x high freq x low freq x # channels
+        modIdxAllB2AShuffleT = NaN(5,nWin,nHigh,nLow,nChan);
+        modIdxAllA2AShuffleT = NaN(5,nWin,nHigh,nLow,nChan);
+        modIdxAllB2BShuffleT = NaN(5,nWin,nHigh,nLow,nChan);
 
         % Create artificial surrogates for the data
-        tic;
-        [phaseAShuff, phaseBShuff] = calculateRandPhaseSignal(monkeyName,expDate,hemisphere,fileNum,...
-            allProbeData{fileNum,iDate}.probe1Ch,allProbeData{fileNum,iDate}.probe2Ch,badElecA{fileNum,iDate},...
-            badElecB{fileNum,iDate},allBadTimes{fileNum,iDate},estChInCortexA{iDate}(iRun,:),...
-            estChInCortexB{iDate}(iRun,:),lowFreqRange);
-        toc;
+        % Shuffle phase in windows
+        clear phaseAShuff phaseBShuff
+        phaseAShuff = ones([5,size(phaseA)],'single');
+        phaseBShuff = ones([5,size(phaseB)],'single');
+        winSize = 10e3;
+
+        for iRep = 1:5
+            rng('shuffle');
+            comb1 = randperm(round(dataLen/10e3));
+            rowIdx = 1;
+            for iL = 1:length(comb1)
+                clear win1
+                win1 = ((comb1(iL)-1)*winSize+1 : (comb1(iL)-1)*winSize+winSize);
+                win1(win1>dataLen) = [];
+                numWin1 = length(win1);
+                phaseAShuff(iRep,:,rowIdx:rowIdx+numWin1-1, :) = phaseA(:,win1, :);
+                phaseBShuff(iRep,:,rowIdx:rowIdx+numWin1-1, :) = phaseB(:,win1, :);
+                rowIdx = rowIdx + numWin1;
+            end
+        end
 
         % Get the PAC
 
@@ -321,14 +335,15 @@ for iDate = 2:3
         lowFreqAconst  = parallel.pool.Constant(phaseAShuff);
         lowFreqBconst  = parallel.pool.Constant(phaseBShuff);
 
-        comb = combvec(1:nHigh, 1:nLow, 1:nWin)';
+        comb = combvec(1:nHigh, 1:nLow, 1:nWin, 1:5)';
         nComb = size(comb,1);
-      
+      clear modShuffleA2B modShuffleB2A modShuffleA2A modShuffleB2B
         tic;
         parfor iC = 1:nComb
             iHigh   = comb(iC,1);
             iLow    = comb(iC,2);
             iWin    = comb(iC,3);
+            iRep    = comb(iC,4);
 
             idx = winStart(iWin):winEnd(iWin);
 
@@ -337,10 +352,10 @@ for iDate = 2:3
             highA = highFreqAconst.Value;
             highB = highFreqBconst.Value;
 
-            modCircleA2B{iC} = getPhaseAmpCoupling(squeeze(lowB(iLow,idx,1:nChan)),squeeze(highA(iHigh,idx,1:nChan)));
-            modCircleB2A{iC} = getPhaseAmpCoupling(squeeze(lowA(iLow,idx,1:nChan)),squeeze(highB(iHigh,idx,1:nChan)));
-            modCircleA2A{iC} = getPhaseAmpCoupling(squeeze(lowA(iLow,idx,1:nChan)),squeeze(highA(iHigh,idx,1:nChan)));
-            modCircleB2B{iC} = getPhaseAmpCoupling(squeeze(lowB(iLow,idx,1:nChan)),squeeze(highB(iHigh,idx,1:nChan)));
+            modShuffleA2B{iC} = getPhaseAmpCoupling(squeeze(lowB(iRep,iLow,idx,1:nChan)),squeeze(highA(iHigh,idx,1:nChan)));
+            modShuffleB2A{iC} = getPhaseAmpCoupling(squeeze(lowA(iRep,iLow,idx,1:nChan)),squeeze(highB(iHigh,idx,1:nChan)));
+            modShuffleA2A{iC} = getPhaseAmpCoupling(squeeze(lowA(iRep,iLow,idx,1:nChan)),squeeze(highA(iHigh,idx,1:nChan)));
+            modShuffleB2B{iC} = getPhaseAmpCoupling(squeeze(lowB(iRep,iLow,idx,1:nChan)),squeeze(highB(iHigh,idx,1:nChan)));
         end
         toc;
 
@@ -348,15 +363,16 @@ for iDate = 2:3
             iHigh   = comb(iC,1);
             iLow    = comb(iC,2);
             iWin    = comb(iC,3);
+            iRep    = comb(iC,4);
 
-            modIdxAllA2BCircleT(iWin,iHigh,iLow,:) = modCircleA2B{iC};
-            modIdxAllB2ACircleT(iWin,iHigh,iLow,:) = modCircleB2A{iC};
-            modIdxAllA2ACircleT(iWin,iHigh,iLow,:) = modCircleA2A{iC};
-            modIdxAllB2BCircleT(iWin,iHigh,iLow,:) = modCircleB2B{iC};
+            modIdxAllA2BShuffleT(iRep,iWin,iHigh,iLow,:) = modShuffleA2B{iC};
+            modIdxAllB2AShuffleT(iRep,iWin,iHigh,iLow,:) = modShuffleB2A{iC};
+            modIdxAllA2AShuffleT(iRep,iWin,iHigh,iLow,:) = modShuffleA2A{iC};
+            modIdxAllB2BShuffleT(iRep,iWin,iHigh,iLow,:) = modShuffleB2B{iC};
         end
 
         save(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramCtrl_' num2str(fileNum) '.mat'],...
-            'modIdxAllA2BCircleT','modIdxAllB2ACircleT','modIdxAllA2ACircleT','modIdxAllB2BCircleT','phaseAShuff','phaseBShuff');
+            'modIdxAllA2BShuffleT','modIdxAllB2AShuffleT','modIdxAllA2AShuffleT','modIdxAllB2BShuffleT');
 
 
         % tic;
@@ -486,13 +502,30 @@ for iDate = 2:3
         %     end
         % 
         % end
-        modIdxAllA2BShuffle{iRun,iDate} = modIdxAllA2BCircleT;
-        modIdxAllB2AShuffle{iRun,iDate} = modIdxAllB2ACircleT;
-        modIdxAllA2AShuffle{iRun,iDate} = modIdxAllA2ACircleT;
-        modIdxAllB2BShuffle{iRun,iDate} = modIdxAllB2BCircleT;
+        modIdxAllA2BShuffle{iRun,iDate} = modIdxAllA2BShuffleT;
+        modIdxAllB2AShuffle{iRun,iDate} = modIdxAllB2AShuffleT;
+        modIdxAllA2AShuffle{iRun,iDate} = modIdxAllA2AShuffleT;
+        modIdxAllB2BShuffle{iRun,iDate} = modIdxAllB2BShuffleT;
         % toc;
     end
 end
+
+modIdxAllA2B95 = cellfun(@(x) reshape(squeeze(median(x,5,'omitnan')),[size(x,1)*size(x,2) nHigh*nLow]),modIdxAllA2BShuffle,'UniformOutput',false);
+modIdxAllA2B95 = cellfun(@(x) single(reshape(prctile(x,95,1),[nHigh nLow])),modIdxAllA2B95,'UniformOutput',0);
+
+modIdxAllB2A95 = cellfun(@(x) reshape(squeeze(median(x,5,'omitnan')),[size(x,1)*size(x,2) nHigh*nLow]),modIdxAllB2AShuffle,'UniformOutput',false);
+modIdxAllB2A95 = cellfun(@(x) single(reshape(prctile(x,95,1),[nHigh nLow])),modIdxAllB2A95,'UniformOutput',0);
+
+modIdxAllA2A95 = cellfun(@(x) reshape(squeeze(median(x,5,'omitnan')),[size(x,1)*size(x,2) nHigh*nLow]),modIdxAllA2AShuffle,'UniformOutput',false);
+modIdxAllA2A95 = cellfun(@(x) single(reshape(prctile(x,95,1),[nHigh nLow])),modIdxAllA2A95,'UniformOutput',0);
+
+modIdxAllB2B95 = cellfun(@(x) reshape(squeeze(median(x,5,'omitnan')),[size(x,1)*size(x,2) nHigh*nLow]),modIdxAllB2BShuffle,'UniformOutput',false);
+modIdxAllB2B95 = cellfun(@(x) single(reshape(prctile(x,95,1),[nHigh nLow])),modIdxAllB2B95,'UniformOutput',0);
+
+correctedA2B = cellfun(@(x,y) (squeeze(median(y,[1 4],'omitnan'))>x),modIdxAllA2B95,modIdxAllA2B,'un',0);
+correctedB2A = cellfun(@(x,y) (squeeze(median(y,[1 4],'omitnan'))>x),modIdxAllB2A95,modIdxAllB2A,'un',0);
+correctedA2A = cellfun(@(x,y) (squeeze(median(y,[1 4],'omitnan'))>x),modIdxAllA2A95,modIdxAllA2A,'un',0);
+correctedB2B = cellfun(@(x,y) (squeeze(median(y,[1 4],'omitnan'))>x),modIdxAllB2B95,modIdxAllB2B,'un',0);
 
 
 %% Getting the shuffled comodulogram - circshift method
@@ -1089,12 +1122,6 @@ for iPlot = 1:4
 
     title(pltTitle); box off;
 end
-
-
-
-
-
-
 
 %% Laminar
 % Dividing and averaging within compartments
