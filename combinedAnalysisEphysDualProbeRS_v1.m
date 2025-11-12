@@ -349,7 +349,7 @@ for iType = 1:3
             var = deepAllCorr; 
     end
     for iBand = 1:5
-        [rhoValLaminar(iType,iBand),pVal(iType,iBand)] = partialcorr(connValsNew,var(:,iBand),distValsNew,"Type","Pearson");
+        [rhoValLaminar(iType,iBand),pVal(iType,iBand)] = corr(connValsNew,var(:,iBand),'Type','Spearman');
     end
 end
 
@@ -359,6 +359,7 @@ box off;
 figure; boxplot([superAllCorr(:,4) midAllCorr(:,4) deepAllCorr(:,4) superMidPairPow(:,4) midDeepPairPow(:,4) superDeepPairPow(:,4)]);
 
 %% 
+clear corrSuperMid corrMidDeep corrSuperDeep laminarCorr
 pairClass = [allMonkeyVars{1}.pairClass; allMonkeyVars{2}.pairClass];
 pairClass(find(singleChRow)+42,:) =[];
 
@@ -387,20 +388,22 @@ for iPlot = 1:3
     midDeep  = midDeepPairPow(val,:);
     superDeep = superDeepPairPow(val,:);
     
-    [rAllSuper(iPlot,:),pAllSuper(iPlot,:)] = partialcorr(allSuper,connNew,distNew); 
-    [rAllMid(iPlot,:),pAllMid(iPlot,:)] = partialcorr(allMid,connNew,distNew);
-    [rAllDeep(iPlot,:),pAllDeep(iPlot,:)] = partialcorr(allDeep,connNew,distNew);
-    laminarCorr   = [partialcorr(allSuper,connNew,distNew) partialcorr(allMid,connNew,distNew) partialcorr(allDeep,connNew,distNew)]';
-    [corrSuperMid(iPlot,:),pSuperMid(iPlot,:)]  = partialcorr(superMid,connNew,distNew) ;
-    [corrMidDeep(iPlot,:),pMidDeep(iPlot,:)]   = partialcorr(midDeep,connNew,distNew);
-    [corrSuperDeep(iPlot,:),pSuperDeep(iPlot,:)]  = partialcorr(superDeep,connNew,distNew);
+    [rAllSuper(iPlot,:),pAllSuper(iPlot,:)] = corr(allSuper,connNew,'Type','Spearman'); 
+    [rAllMid(iPlot,:),pAllMid(iPlot,:)] = corr(allMid,connNew,'Type','Spearman');
+    [rAllDeep(iPlot,:),pAllDeep(iPlot,:)] = corr(allDeep,connNew,'Type','Spearman');
+    laminarCorr   = [corr(allSuper,connNew,'Type','Spearman') corr(allMid,connNew,'Type','Spearman') corr(allDeep,connNew,'Type','Spearman')]';
+    [corrSuperMid(iPlot,:),pSuperMid(iPlot,:)]  = corr(superMid,connNew,'Type','Spearman') ;
+    [corrMidDeep(iPlot,:),pMidDeep(iPlot,:)]   = corr(midDeep,connNew,'Type','Spearman');
+    [corrSuperDeep(iPlot,:),pSuperDeep(iPlot,:)]  = corr(superDeep,connNew,'Type','Spearman');
 
     figure; 
     subplot(121);
     bar([laminarCorr(:,4)' corrSuperMid(iPlot,4) corrMidDeep(iPlot,4) corrSuperDeep(iPlot,4)]);
     box off; ylim([0 0.6])
-    subplot(122); %boxplot([allSuper(:,4) allMid(:,4) allDeep(:,4) superMid(:,4) midDeep(:,4) superDeep(:,4)]);
-   swarmchart((1:6).*ones(size(allSuper,1),1),[allSuper(:,4) allMid(:,4) allDeep(:,4) superMid(:,4) midDeep(:,4) superDeep(:,4)],80,'Marker','.','YJitterWidth',0.2);
+    subplot(122); 
+    boxplot([allSuper(:,4) allMid(:,4) allDeep(:,4) superMid(:,4) midDeep(:,4) superDeep(:,4)]);
+    xticks(1:6); xticklabels({'Super-Super','Middle-Middle','Deep-Deep','Super-Mid','Mid-Deep','Super-Deep'});
+   % swarmchart((1:6).*ones(size(allSuper,1),1),[allSuper(:,4) allMid(:,4) allDeep(:,4) superMid(:,4) midDeep(:,4) superDeep(:,4)],80,'Marker','.','YJitterWidth',0.2);
     box off; ylim([0 1]);
     sgtitle(figTitle);
     [p(iPlot,:),~,stats{iPlot}] = anova1([allSuper(:,4) allMid(:,4) allDeep(:,4) superMid(:,4) midDeep(:,4) superDeep(:,4)],[],'off');

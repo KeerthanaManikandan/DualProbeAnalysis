@@ -14,7 +14,7 @@ addpath(genpath([commonDir '\Codes\neuroshare']));
 addpath(genpath([commonDir '\Codes\DualProbe']));
 addpath(genpath([commonDir '\Codes\Imaging']));
 addpath(genpath([commonDir '\Codes\chronux_2_12']));
-rmpath(genpath([commonDir '\Codes\chronux_2_12\fly_track\videoIO']));
+rmpath(genpath([commonDir '\Codes\chronux_2_12\fly_track\videogiIO']));
 rmpath(genpath([commonDir '\Codes\chronux_2_12\spectral_analysis\continuous\dupes']));
 clc;
 
