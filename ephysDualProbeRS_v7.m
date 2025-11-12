@@ -1321,7 +1321,7 @@ end
 
 
 if ~varIdx
-    % Remove bad channels
+    % Remove bad channelscommonDir
     probeA(:,badElecA) = [];
     probeB(:,badElecB) = [];
 
