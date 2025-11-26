@@ -560,6 +560,19 @@ meanB2A = mean(correctedB2A,1); sigB2A = meanB2A>1.96;
 meanA2A = mean(correctedA2A,1); sigA2A = meanA2A>1.96;
 meanB2B = mean(correctedB2B,1); sigB2B = meanB2B>1.96; 
 
+commonPairs = sigA2B & sigB2A & sigA2A & sigB2A;
+
+a2bAll = correctedA2B; a2bAll(:,~commonPairs) = NaN;
+b2aAll = correctedB2A; b2aAll(:,~commonPairs) = NaN;
+a2aAll = correctedA2A; a2aAll(:,~commonPairs) = NaN;
+b2bAll = correctedB2B; b2bAll(:,~commonPairs) = NaN;
+
+colIdx = [12:16 23:27];
+figure;boxplot([median(a2bAll(:,colIdx),2,'omitnan') median(b2aAll(:,colIdx),2,'omitnan') ...
+    median(a2aAll(:,colIdx),2,'omitnan') median(b2bAll(:,colIdx),2,'omitnan')],...
+    {'A-B','B-A','A-A','B-B'});
+
+
 figure; 
 boxplot([median(correctedA2B(:,sigA2B),2) median(correctedB2A(:,sigB2A),2) ...
     median(correctedA2A(:,sigA2A),2) median(correctedB2B(:,sigB2B),2)],...
@@ -568,19 +581,19 @@ boxplot([median(correctedA2B(:,sigA2B),2) median(correctedB2A(:,sigB2A),2) ...
 connValsT = connValsAll(:,1:5);
 connValsT = reshape(connValsT,[1 numel(connValsT)]);connValsT(zeroVals) = [];
 
-[yIndex,~] = discretize(connValsT,-0.4:0.1:0.8);
-loc1 = yIndex<8; loc2 = yIndex>=8;
+[yIndex,edges] = discretize(connValsT,-0.4:0.1:0.8);
+loc1 = yIndex<=8; loc2 = yIndex>8;
 unlikePairs = (median(correctedA2B(:,sigA2B),2)+ median(correctedB2A(:,sigB2A),2))./2;
 likePairs   = [median(correctedA2A(:,sigA2A),2); median(correctedB2B(:,sigB2B),2)];
 
 figure;
-subplot(121); histogram(unlikePairs(loc1),0:2:ceil(max(unlikePairs))); hold on;box off;
-histogram(unlikePairs(loc2),0:2:ceil(max(unlikePairs))); hold on;box off;
+subplot(121); histogram(unlikePairs(loc1),0:1:ceil(max(unlikePairs))); hold on;box off;
+histogram(unlikePairs(loc2),0:1:ceil(max(unlikePairs))); hold on;box off;
 % xlim([0 1e-4]); ylim([0 15]);
 legend('FC<=0.3','FC>0.3','Location','northeast');
 
-subplot(122); histogram(likePairs([loc1;loc1]),0:2:ceil(max(unlikePairs))); hold on;box off;
-histogram(likePairs([loc2;loc2]),0:ceil(max(unlikePairs))); hold on;box off;
+subplot(122); histogram(likePairs([loc1;loc1]),0:1:ceil(max(unlikePairs))); hold on;box off;
+histogram(likePairs([loc2;loc2]),0:1:ceil(max(unlikePairs))); hold on;box off;
 % xlim([0 1e-4]); ylim([0 15]);box off;
 legend('FC<=0.3','FC>0.3','Location','northeast');
 
@@ -610,20 +623,157 @@ modIdxAllA2AShuffleR = cellfun(@(x) reshape(x,[size(x,1)*size(x,2) nHigh*nLow si
 modIdxAllB2BShuffleR = reshape(modIdxAllB2BShuffle,[1 numel(modIdxAllB2BShuffle)]); modIdxAllB2BShuffleR(cell2mat(cellfun(@(x) isempty(x), modIdxAllB2BShuffleR,'un',0))) = [];
 modIdxAllB2BShuffleR = cellfun(@(x) reshape(x,[size(x,1)*size(x,2) nHigh*nLow size(x,5)]),modIdxAllB2BShuffleR,'un',0);
 
-a2bLaminar = (cellfun(@(x,y)(reshape(squeeze(median(y,1,'omitnan')),[nHigh*nLow size(y,4) ])-(squeeze(mean(x,1,'omitnan'))))./(squeeze(std(x))),modIdxAllA2BShuffleR,modIdxAllA2BR,'un',0));
-b2aLaminar = (cellfun(@(x,y)(reshape(squeeze(median(y,1,'omitnan')),[nHigh*nLow size(y,4) ])-(squeeze(mean(x,1,'omitnan'))))./(squeeze(std(x))),modIdxAllB2AShuffleR,modIdxAllB2AR,'un',0));
-a2aLaminar = (cellfun(@(x,y)(reshape(squeeze(median(y,1,'omitnan')),[nHigh*nLow size(y,4) ])-(squeeze(mean(x,1,'omitnan'))))./(squeeze(std(x))),modIdxAllA2AShuffleR,modIdxAllA2AR,'un',0));
-b2bLaminar = (cellfun(@(x,y)(reshape(squeeze(median(y,1,'omitnan')),[nHigh*nLow size(y,4) ])-(squeeze(mean(x,1,'omitnan'))))./(squeeze(std(x))),modIdxAllB2BShuffleR,modIdxAllB2BR,'un',0));
+a2bLaminar = (cellfun(@(x,y)(reshape(squeeze(mean(y,1,'omitnan')),[nHigh*nLow size(y,4) ])-(squeeze(mean(x,1,'omitnan'))))./(squeeze(std(x))),modIdxAllA2BShuffleR,modIdxAllA2BR,'un',0));
+b2aLaminar = (cellfun(@(x,y)(reshape(squeeze(mean(y,1,'omitnan')),[nHigh*nLow size(y,4) ])-(squeeze(mean(x,1,'omitnan'))))./(squeeze(std(x))),modIdxAllB2AShuffleR,modIdxAllB2AR,'un',0));
+a2aLaminar = (cellfun(@(x,y)(reshape(squeeze(mean(y,1,'omitnan')),[nHigh*nLow size(y,4) ])-(squeeze(mean(x,1,'omitnan'))))./(squeeze(std(x))),modIdxAllA2AShuffleR,modIdxAllA2AR,'un',0));
+b2bLaminar = (cellfun(@(x,y)(reshape(squeeze(mean(y,1,'omitnan')),[nHigh*nLow size(y,4) ])-(squeeze(mean(x,1,'omitnan'))))./(squeeze(std(x))),modIdxAllB2BShuffleR,modIdxAllB2BR,'un',0));
+
+%%
+colVals = zeros(1,143); colVals(colIdx) =1; 
+a2bLaminarSuper = cell2mat(cellfun(@(x) median(x(:,1:6),2,'omitnan'),a2bLaminar,'UniformOutput',0));
+a2bLaminarSuper(~colVals,:) = NaN;   a2bLaminarSuper = reshape(a2bLaminarSuper,[nHigh nLow numel(a2bLaminar)]); 
+a2bLaminarMid = cell2mat(cellfun(@(x) median(x(:,7:12),2,'omitnan'),a2bLaminar,'UniformOutput',0));
+a2bLaminarMid (~colVals,:) = NaN;   a2bLaminarMid  = reshape(a2bLaminarMid ,[nHigh nLow numel(a2bLaminar)]); 
+a2bLaminarDeep = cell2mat(cellfun(@(x) median(x(:,13:end),2,'omitnan'),a2bLaminar,'UniformOutput',0));
+a2bLaminarDeep(~colVals,:) = NaN;   a2bLaminarDeep = reshape(a2bLaminarDeep,[nHigh nLow numel(a2bLaminar)]); 
+
+b2aLaminarSuper = cell2mat(cellfun(@(x) median(x(:,1:6),2,'omitnan'),b2aLaminar,'UniformOutput',0));
+b2aLaminarSuper(~colVals,:) = NaN;   b2aLaminarSuper = reshape(b2aLaminarSuper,[nHigh nLow numel(a2bLaminar)]); 
+b2aLaminarMid = cell2mat(cellfun(@(x) median(x(:,7:12),2,'omitnan'),b2aLaminar,'UniformOutput',0));
+b2aLaminarMid (~colVals,:) = NaN;   b2aLaminarMid  = reshape(b2aLaminarMid ,[nHigh nLow numel(a2bLaminar)]); 
+b2aLaminarDeep = cell2mat(cellfun(@(x) median(x(:,13:end),2,'omitnan'),b2aLaminar,'UniformOutput',0));
+b2aLaminarDeep(~colVals,:) = NaN;   b2aLaminarDeep = reshape(b2aLaminarDeep,[nHigh nLow numel(a2bLaminar)]); 
+
+a2aLaminarSuper = cell2mat(cellfun(@(x) median(x(:,1:6),2,'omitnan'),a2aLaminar,'UniformOutput',0));
+a2aLaminarSuper(~colVals,:) = NaN;   a2aLaminarSuper = reshape(a2aLaminarSuper,[nHigh nLow numel(a2bLaminar)]); 
+a2aLaminarMid = cell2mat(cellfun(@(x) median(x(:,7:12),2,'omitnan'),a2aLaminar,'UniformOutput',0));
+a2aLaminarMid (~colVals,:) = NaN;   a2aLaminarMid  = reshape(a2aLaminarMid ,[nHigh nLow numel(a2bLaminar)]); 
+a2aLaminarDeep = cell2mat(cellfun(@(x) median(x(:,13:end),2,'omitnan'),a2aLaminar,'UniformOutput',0));
+a2aLaminarDeep(~colVals,:) = NaN;   a2aLaminarDeep = reshape(a2aLaminarDeep,[nHigh nLow numel(a2bLaminar)]); 
+
+b2bLaminarSuper = cell2mat(cellfun(@(x) median(x(:,1:6),2,'omitnan'),b2bLaminar,'UniformOutput',0));
+b2bLaminarSuper(~colVals,:) = NaN;   b2bLaminarSuper = reshape(b2bLaminarSuper,[nHigh nLow numel(a2bLaminar)]); 
+b2bLaminarMid = cell2mat(cellfun(@(x) median(x(:,7:12),2,'omitnan'),b2bLaminar,'UniformOutput',0));
+b2bLaminarMid(~colVals,:) = NaN;   b2bLaminarMid = reshape(b2bLaminarMid,[nHigh nLow numel(a2bLaminar)]); 
+b2bLaminarDeep = cell2mat(cellfun(@(x) median(x(:,13:end),2,'omitnan'),b2bLaminar,'UniformOutput',0));
+b2bLaminarDeep(~colVals,:) = NaN;   b2bLaminarDeep = reshape(b2bLaminarDeep,[nHigh nLow numel(a2bLaminar)]); 
+
+%% 
+figure; 
+subplot(341); imagesc(lowFreqRange,gammaRange,squeeze(median(a2bLaminarSuper,3,'omitnan'))); clim([0 5]); title('A-B'); axis square; set(gca,'YDir','normal'); ylabel('Superficial');
+subplot(342); imagesc(lowFreqRange,gammaRange,squeeze(median(b2aLaminarSuper,3,'omitnan'))); clim([0 5]); title('B-A');axis square; set(gca,'YDir','normal'); 
+subplot(343); imagesc(lowFreqRange,gammaRange,squeeze(median(a2aLaminarSuper,3,'omitnan'))); clim([0 5]); title('A-A');axis square; set(gca,'YDir','normal'); 
+subplot(344); imagesc(lowFreqRange,gammaRange,squeeze(median(b2bLaminarSuper,3,'omitnan'))); clim([0 5]); title('B-B');colorbar;axis square; set(gca,'YDir','normal'); 
+
+subplot(345); imagesc(lowFreqRange,gammaRange,squeeze(median(a2bLaminarMid,3,'omitnan'))); clim([0 5]); title('A-B'); ylabel('Middle');axis square; set(gca,'YDir','normal'); 
+subplot(346); imagesc(lowFreqRange,gammaRange,squeeze(median(b2aLaminarMid,3,'omitnan'))); clim([0 5]); title('B-A');axis square; set(gca,'YDir','normal'); 
+subplot(347); imagesc(lowFreqRange,gammaRange,squeeze(median(a2aLaminarMid,3,'omitnan'))); clim([0 5]); title('A-A');axis square; set(gca,'YDir','normal'); 
+subplot(348); imagesc(lowFreqRange,gammaRange,squeeze(median(b2bLaminarMid,3,'omitnan'))); clim([0 5]); title('B-B');colorbar;axis square; set(gca,'YDir','normal'); 
+
+subplot(349); imagesc(lowFreqRange,gammaRange,squeeze(median(a2bLaminarDeep,3,'omitnan'))); clim([0 5]); title('A-B'); ylabel('Deep');axis square; set(gca,'YDir','normal'); 
+subplot(3,4,10); imagesc(lowFreqRange,gammaRange,squeeze(median(b2aLaminarDeep,3,'omitnan'))); clim([0 5]); title('B-A');axis square; set(gca,'YDir','normal'); 
+subplot(3,4,11); imagesc(lowFreqRange,gammaRange,squeeze(median(a2aLaminarDeep,3,'omitnan'))); clim([0 5]); title('A-A');axis square; set(gca,'YDir','normal'); 
+subplot(3,4,12); imagesc(lowFreqRange,gammaRange,squeeze(median(b2bLaminarDeep,3,'omitnan'))); clim([0 5]); title('B-B');colorbar;axis square; set(gca,'YDir','normal'); 
+xlabel('Phase'); ylabel('Amplitude');
+
 
 %% Plot
-figure; subplot(131); imagesc(lowFreqRange,gammaRange,reshape(median(a2bLaminar{5}(:,1:6),2,'omitnan'),[11 13]));
-clim([1.96 5])
-subplot(132); imagesc(lowFreqRange,gammaRange,reshape(median(a2bLaminar{5}(:,7:12),2,'omitnan'),[11 13]));
-clim([1.96 5])
-subplot(133); imagesc(lowFreqRange,gammaRange,reshape(median(a2bLaminar{5}(:,13:end),2,'omitnan'),[11 13]));
-clim([1.96 5])
-%%
+figure; subplot(131); imagesc(lowFreqRange,gammaRange,reshape(median(a2bLaminar{1}(:,1:6),2,'omitnan'),[11 13]));
+clim([1.96 5]); colorbar;
+subplot(132); imagesc(lowFreqRange,gammaRange,reshape(median(a2bLaminar{1}(:,7:12),2,'omitnan'),[11 13]));
+clim([1.96 5]);colorbar;
+subplot(133); imagesc(lowFreqRange,gammaRange,reshape(median(a2bLaminar{1}(:,13:end),2,'omitnan'),[11 13]));
+clim([1.96 5]);colorbar;
 
+%%
+a2bSuper = cell2mat(cellfun(@(x,y)(reshape(squeeze(mean(y(:,:,:,1:6),[1 4],'omitnan')),[nHigh*nLow,1])' - squeeze(mean(x(:,:,1:6),[1 3],'omitnan')))./squeeze(std(x(:,:,1:6),[],[1 3])),modIdxAllA2BShuffleR,modIdxAllA2BR,'un',0)'); 
+a2bSuper(:,~colVals) = NaN;  a2bSuper = reshape(a2bSuper,[numel(a2bLaminar) nHigh nLow]); 
+a2bMid   = cell2mat(cellfun(@(x,y)(reshape(squeeze(mean(y(:,:,:,7:12),[1 4],'omitnan')),[nHigh*nLow,1])' - squeeze(mean(x(:,:,7:12),[1 3],'omitnan')))./squeeze(std(x(:,:,7:12),[],[1 3])),modIdxAllA2BShuffleR,modIdxAllA2BR,'un',0)');
+a2bMid(:,~colVals) = NaN;  a2bMid = reshape(a2bMid,[numel(a2bLaminar) nHigh nLow]); 
+a2bDeep  = cell2mat(cellfun(@(x,y)(reshape(squeeze(mean(y(:,:,:,13:end),[1 4],'omitnan')),[nHigh*nLow,1])' - squeeze(mean(x(:,:,13:end),[1 3],'omitnan')))./squeeze(std(x(:,:,13:end),[],[1 3])),modIdxAllA2BShuffleR,modIdxAllA2BR,'un',0)');
+a2bDeep(:,~colVals) = NaN;  a2bDeep = reshape(a2bDeep,[numel(a2bLaminar) nHigh nLow]); 
+
+b2aSuper = cell2mat(cellfun(@(x,y)(reshape(squeeze(mean(y(:,:,:,1:6),[1 4],'omitnan')),[nHigh*nLow,1])' - squeeze(mean(x(:,:,1:6),[1 3],'omitnan')))./squeeze(std(x(:,:,1:6),[],[1 3])),modIdxAllB2AShuffleR,modIdxAllB2AR,'un',0)');
+b2aSuper(:,~colVals) = NaN;  b2aSuper = reshape(b2aSuper,[numel(a2bLaminar) nHigh nLow]); 
+b2aMid   = cell2mat(cellfun(@(x,y)(reshape(squeeze(mean(y(:,:,:,7:12),[1 4],'omitnan')),[nHigh*nLow,1])' - squeeze(mean(x(:,:,7:12),[1 3],'omitnan')))./squeeze(std(x(:,:,7:12),[],[1 3])),modIdxAllB2AShuffleR,modIdxAllB2AR,'un',0)');
+b2aMid (:,~colVals) = NaN;  b2aMid  = reshape(b2aMid ,[numel(a2bLaminar) nHigh nLow]); 
+b2aDeep  = cell2mat(cellfun(@(x,y)(reshape(squeeze(mean(y(:,:,:,13:end),[1 4],'omitnan')),[nHigh*nLow,1])' - squeeze(mean(x(:,:,13:end),[1 3],'omitnan')))./squeeze(std(x(:,:,13:end),[],[1 3])),modIdxAllB2AShuffleR,modIdxAllB2AR,'un',0)');
+b2aDeep(:,~colVals) = NaN;  b2aDeep = reshape(b2aDeep,[numel(a2bLaminar) nHigh nLow]); 
+
+a2aSuper = cell2mat(cellfun(@(x,y)(reshape(squeeze(mean(y(:,:,:,1:6),[1 4],'omitnan')),[nHigh*nLow,1])' - squeeze(mean(x(:,:,1:6),[1 3],'omitnan')))./squeeze(std(x(:,:,1:6),[],[1 3])),modIdxAllA2AShuffleR,modIdxAllA2AR,'un',0)');
+a2aSuper(:,~colVals) = NaN;  a2aSuper = reshape(a2aSuper,[numel(a2bLaminar) nHigh nLow]); 
+a2aMid   = cell2mat(cellfun(@(x,y)(reshape(squeeze(mean(y(:,:,:,7:12),[1 4],'omitnan')),[nHigh*nLow,1])' - squeeze(mean(x(:,:,7:12),[1 3],'omitnan')))./squeeze(std(x(:,:,7:12),[],[1 3])),modIdxAllA2AShuffleR,modIdxAllA2AR,'un',0)');
+a2aMid (:,~colVals) = NaN;  a2aMid  = reshape(a2aMid ,[numel(a2bLaminar) nHigh nLow]); 
+a2aDeep  = cell2mat(cellfun(@(x,y)(reshape(squeeze(mean(y(:,:,:,13:end),[1 4],'omitnan')),[nHigh*nLow,1])' - squeeze(mean(x(:,:,13:end),[1 3],'omitnan')))./squeeze(std(x(:,:,13:end),[],[1 3])),modIdxAllA2AShuffleR,modIdxAllA2AR,'un',0)');
+a2aDeep(:,~colVals) = NaN;  a2aDeep = reshape(a2aDeep,[numel(a2bLaminar) nHigh nLow]); 
+
+b2bSuper = cell2mat(cellfun(@(x,y)(reshape(squeeze(mean(y(:,:,:,1:6),[1 4],'omitnan')),[nHigh*nLow,1])' - squeeze(mean(x(:,:,1:6),[1 3],'omitnan')))./squeeze(std(x(:,:,1:6),[],[1 3])),modIdxAllB2BShuffleR,modIdxAllB2BR,'un',0)');
+b2bSuper(:,~colVals) = NaN;  b2bSuper = reshape(b2bSuper,[numel(a2bLaminar) nHigh nLow]); 
+b2bMid   = cell2mat(cellfun(@(x,y)(reshape(squeeze(mean(y(:,:,:,7:12),[1 4],'omitnan')),[nHigh*nLow,1])' - squeeze(mean(x(:,:,7:12),[1 3],'omitnan')))./squeeze(std(x(:,:,7:12),[],[1 3])),modIdxAllB2BShuffleR,modIdxAllB2BR,'un',0)');
+b2bMid (:,~colVals) = NaN;  b2bMid = reshape(b2bMid ,[numel(a2bLaminar) nHigh nLow]); 
+b2bDeep  = cell2mat(cellfun(@(x,y)(reshape(squeeze(mean(y(:,:,:,13:end),[1 4],'omitnan')),[nHigh*nLow,1])' - squeeze(mean(x(:,:,13:end),[1 3],'omitnan')))./squeeze(std(x(:,:,13:end),[],[1 3])),modIdxAllB2BShuffleR,modIdxAllB2BR,'un',0)');
+b2bDeep(:,~colVals) = NaN;  b2bDeep = reshape(b2bDeep,[numel(a2bLaminar) nHigh nLow]); 
+
+%% 
+figure; 
+subplot(341); imagesc(lowFreqRange,gammaRange,squeeze(median(a2bSuper,1,'omitnan'))); clim([0 5]); title('A-B'); axis square; set(gca,'YDir','normal'); ylabel('Superficial');
+subplot(342); imagesc(lowFreqRange,gammaRange,squeeze(median(b2aSuper,1,'omitnan'))); clim([0 5]); title('B-A');axis square; set(gca,'YDir','normal'); 
+subplot(343); imagesc(lowFreqRange,gammaRange,squeeze(median(a2aSuper,1,'omitnan'))); clim([0 5]); title('A-A');axis square; set(gca,'YDir','normal'); 
+subplot(344); imagesc(lowFreqRange,gammaRange,squeeze(median(b2bSuper,1,'omitnan'))); clim([0 5]); title('B-B');colorbar;axis square; set(gca,'YDir','normal'); 
+
+subplot(345); imagesc(lowFreqRange,gammaRange,squeeze(median(a2bMid,1,'omitnan'))); clim([0 5]); title('A-B'); ylabel('Middle');axis square; set(gca,'YDir','normal'); 
+subplot(346); imagesc(lowFreqRange,gammaRange,squeeze(median(b2aMid,1,'omitnan'))); clim([0 5]); title('B-A');axis square; set(gca,'YDir','normal'); 
+subplot(347); imagesc(lowFreqRange,gammaRange,squeeze(median(a2aMid,1,'omitnan'))); clim([0 5]); title('A-A');axis square; set(gca,'YDir','normal'); 
+subplot(348); imagesc(lowFreqRange,gammaRange,squeeze(median(b2bMid,1,'omitnan'))); clim([0 5]); title('B-B');colorbar;axis square; set(gca,'YDir','normal'); 
+
+subplot(349); imagesc(lowFreqRange,gammaRange,squeeze(median(a2bDeep,1,'omitnan'))); clim([0 5]); title('A-B'); ylabel('Deep');axis square; set(gca,'YDir','normal'); 
+subplot(3,4,10); imagesc(lowFreqRange,gammaRange,squeeze(median(b2aDeep,1,'omitnan'))); clim([0 5]); title('B-A');axis square; set(gca,'YDir','normal'); 
+subplot(3,4,11); imagesc(lowFreqRange,gammaRange,squeeze(median(a2aDeep,1,'omitnan'))); clim([0 5]); title('A-A');axis square; set(gca,'YDir','normal'); 
+subplot(3,4,12); imagesc(lowFreqRange,gammaRange,squeeze(median(b2bDeep,1,'omitnan'))); clim([0 5]); title('B-B');colorbar;axis square; set(gca,'YDir','normal'); 
+xlabel('Phase'); ylabel('Amplitude');
+
+
+%%
+figure;
+for iPlot = 1:3
+    switch iPlot
+        case 1
+            a2b = cell2mat(cellfun(@ (x) median(x(sigA2B,1:6),2,'omitnan'), a2bLaminar,'un',0));
+            b2a = cell2mat(cellfun(@ (x) median(x(sigB2A,1:6),2,'omitnan'), b2aLaminar,'un',0));
+            a2a = cell2mat(cellfun(@ (x) median(x(sigA2A,1:6),2,'omitnan'), a2aLaminar,'un',0));
+            b2b = cell2mat(cellfun(@ (x) median(x(sigB2B,1:6),2,'omitnan'), b2bLaminar,'un',0));
+            pltTitle = 'Superficial';
+        case 2
+            a2b = cell2mat(cellfun(@ (x) median(x(sigA2B,7:12), 2,'omitnan'), a2bLaminar,'un',0));
+            b2a = cell2mat(cellfun(@ (x) median(x(sigB2A,7:12), 2,'omitnan'), b2aLaminar,'un',0));
+            a2a = cell2mat(cellfun(@ (x) median(x(sigA2A,7:12), 2,'omitnan'), a2aLaminar,'un',0));
+            b2b = cell2mat(cellfun(@ (x) median(x(sigB2B,7:12), 2,'omitnan'), b2bLaminar,'un',0));
+            pltTitle = 'Middle';
+        case 3
+            a2b = cell2mat(cellfun(@ (x) median(x(sigA2B,13:end), 2,'omitnan'), a2bLaminar,'un',0));
+            b2a = cell2mat(cellfun(@ (x) median(x(sigB2A,13:end), 2,'omitnan'), b2aLaminar,'un',0));
+            a2a = cell2mat(cellfun(@ (x) median(x(sigA2A,13:end), 2,'omitnan'), a2aLaminar,'un',0));
+            b2b = cell2mat(cellfun(@ (x) median(x(sigB2B,13:end), 2,'omitnan'), b2bLaminar,'un',0));
+            pltTitle = 'Deep';
+    end
+
+
+    % figure;
+    % subplot(221); showLinearFit(connValsT,squeeze(a2b(iLayer,:)),0.3,0.85e-4,0.8e-4); box off; xlim([-0.6 0.8]); ylim([0 1e-4]);title('A--B'); axis square;
+    % subplot(222); showLinearFit(connValsT,squeeze(b2a(iLayer,:)),0.3,0.85e-4,0.8e-4); box off; xlim([-0.6 0.8]); ylim([0 1e-4]);title('B--A'); axis square;
+    % subplot(223); showLinearFit(connValsT,squeeze(a2a(iLayer,:)),0.3,1.85e-4,1.8e-4); box off; xlim([-0.6 0.8]); ylim([0 2e-4]);title('A--A'); axis square;
+    % subplot(224); showLinearFit(connValsT,squeeze(a2b(iLayer,:)),0.3,0.85e-4,0.8e-4); box off; xlim([-0.6 0.8]); ylim([0 2e-4]);title('B--B'); axis square;
+    % xlabel('Functional connectivity'); ylabel('Modulation index')
+    % sgtitle([pltTitle '- ' layerTitle]);
+
+    subplot(1,3,iPlot)
+    imagesc([[mean(a2b,2);NaN(3,1)]  [mean(b2a,2);NaN]  [mean(a2a,2)]  [mean(b2b,2);NaN(3,1)]]);%,{'A-B','B-A','A-A','B-B'});
+    title(pltTitle ); box off; clim([1.96 5]);%ylim([0 2e-4]);
+    xticks(1:4); xticklabels({'A-B','B-A','A-A','B-B'});
+end
+
+%%
+figure;
 for iPlot = 1:3
     switch iPlot
         case 1
@@ -656,12 +806,10 @@ for iPlot = 1:3
     % xlabel('Functional connectivity'); ylabel('Modulation index')
     % sgtitle([pltTitle '- ' layerTitle]);
 
-    figure;
+    subplot(1,3,iPlot)
     boxplot([a2b  b2a  a2a  b2b],{'A-B','B-A','A-A','B-B'});
-    sgtitle(pltTitle ); box off; %ylim([0 2e-4]);
+    title(pltTitle ); box off; ylim([-1 4]);%ylim([0 2e-4]);
 end
-
-
 
 
 %% Getting the shuffled comodulogram - circshift method
