@@ -58,10 +58,13 @@ end
 
 %% Bar plot of correlations vs timescales
 figure;
-bar(rhoVal); legend(bandLabels,'Location','southeast'); xticklabels({'Time series';'Power';'Infraslow'});
+bar(rhoVal,'BaseValue',-0.2); legend(bandLabels,'Location','northwest'); xticklabels({'Time series';'Power';'Infraslow'});
+ylabel('Correlation'); title('Correlation between functional connectivity and electrophysiology conditioned on distance');
+box off;
 
 %% Bar plot of correlations for power
 figure; bar(rhoVal(2,[2 4]));xticklabels({'Alpha','Gamma'});box off;
+
 %% Plot pairwise correlations, FC and distance
 figure; scatter3(distVals,medEnvelopeCorr(:,4),connVals,'filled');
 xlabel('Distance (mm)'); ylabel('Power'); zlabel('FC');

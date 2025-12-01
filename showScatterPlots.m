@@ -33,14 +33,28 @@ end
 end
 
 %% Function to fit a line
+
 function showLinearFit(xVal,yVal,textLocX,textLocY1,textLocY2)
 plot(xVal,yVal,'o','MarkerSize',5,'MarkerFaceColor',[0 0.4470 0.7410]); hold on; box off;
-coeff = polyfit(xVal,yVal,1);
+coeff = fit(xVal,double(yVal),'poly1','Robust','LAR');
 xFit  = linspace(min(xVal),max(xVal),1000);
-yFit  = polyval(coeff,xFit); mdl = fitlm(xVal,yVal);
+yFit  = coeff.p1*xFit + coeff.p2; mdl = fitlm(xVal,yVal,'RobustOpts','on');
 plot(xFit,yFit,'-k','LineWidth',1);
+if nargin<3
+    textLocX  = max(xVal)-0.2*max(xVal);
+    textLocY1 = max(yVal)-0.2*max(yVal);
+    textLocY2 = max(yVal)-0.3*max(yVal);
+end
 text(textLocX, textLocY1,['R^2 : ' num2str(mdl.Rsquared.Ordinary*100) '%']);
-text(textLocX, textLocY2,['p-val: ' num2str(mdl.Coefficients.pValue(2))]);
+text(textLocX, textLocY2,['p-val: ' num2str(mdl.ModelFitVsNullModel.Pvalue)]);
+
+% plot(xVal,yVal,'o','MarkerSize',5,'MarkerFaceColor',[0 0.4470 0.7410]); hold on; box off;
+% coeff = polyfit(xVal,yVal,1);
+% xFit  = linspace(min(xVal),max(xVal),1000);
+% yFit  = polyval(coeff,xFit); mdl = fitlm(xVal,yVal);
+% plot(xFit,yFit,'-k','LineWidth',1);
+% text(textLocX, textLocY1,['R^2 : ' num2str(mdl.Rsquared.Ordinary*100) '%']);
+% text(textLocX, textLocY2,['p-val: ' num2str(mdl.Coefficients.pValue(2))]);
 end
 
 %% Fit exponential curve
