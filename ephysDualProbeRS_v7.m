@@ -111,8 +111,8 @@ nHigh    = size(gammaRange,2);
 nLow     = size(lowFreqRange,2);
 
 % Initialize window and step size
-winSize  = 30e3;
-stepSize = 10e3;
+winSize  = 2e3;
+stepSize = 2e3;
 
 % Get the phase amplitude coupling for the recordings...
 for iDate = 2:5%size(allDates,1)
@@ -122,13 +122,13 @@ for iDate = 2:5%size(allDates,1)
 
     for iRun = 1:length(datFileNum)
         fileNum = datFileNum(iRun);
-        fileMat = ['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramVals_' num2str(fileNum) '.mat'];
+        fileMat = ['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramVals_2sec_' num2str(fileNum) '.mat'];
         chA = estChInCortexA{iDate}(iRun,:);
         chB = estChInCortexB{iDate}(iRun,:);
 
         if chA(1)== 0 || chB(1)==0; continue; end
 
-        if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramVals_' num2str(fileNum) '.mat'],'file') %(~ismember('modIdxAllA2BCircleT', who('-file', fileMat))) || 1%
+        if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramVals_2sec_' num2str(fileNum) '.mat'],'file') %(~ismember('modIdxAllA2BCircleT', who('-file', fileMat))) || 1%
             clc; disp(['Processing data for ' monkeyName ': Date: ' allDates(iDate,:) ' ; File: ' num2str(fileNum)]);
 
 
@@ -191,26 +191,50 @@ for iDate = 2:5%size(allDates,1)
             end
             toc;
 
-            save(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramVals_' num2str(fileNum) '.mat'],...
-                'modA2B','modB2A','modA2A','modB2B','-append');
+            save(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramVals_2sec_' num2str(fileNum) '.mat'],...
+                'modA2B','modB2A','modA2A','modB2B');
             clear lowFreqAconst lowFreqBconst highFreqAconst highFreqBconst
 
-            modIdxAllA2B{iRun,iDate} = modA2B;
-            modIdxAllB2A{iRun,iDate} = modB2A;
-            modIdxAllA2A{iRun,iDate} = modA2A;
-            modIdxAllB2B{iRun,iDate} = modB2B;
+            modIdxAllA2B2sec{iRun,iDate} = modA2B;
+            modIdxAllB2A2sec{iRun,iDate} = modB2A;
+            modIdxAllA2A2sec{iRun,iDate} = modA2A;
+            modIdxAllB2B2sec{iRun,iDate} = modB2B;
 
         else
             clear vars;
-            vars = matfile(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramVals_' num2str(fileNum) '.mat']);
-            modIdxAllA2B{iRun,iDate} = vars.modA2B;
-            modIdxAllB2A{iRun,iDate} = vars.modB2A;
-            modIdxAllA2A{iRun,iDate} = vars.modA2A;
-            modIdxAllB2B{iRun,iDate} = vars.modB2B;
+            vars = matfile(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramVals_2sec_' num2str(fileNum) '.mat']);
+            modIdxAllA2B2sec{iRun,iDate} = vars.modA2B;
+            modIdxAllB2A2sec{iRun,iDate} = vars.modB2A;
+            modIdxAllA2A2sec{iRun,iDate} = vars.modA2A;
+            modIdxAllB2B2sec{iRun,iDate} = vars.modB2B;
 
         end
     end
 end
+
+%% 
+a2b2Sec = modA2B;
+b2a2Sec = modB2A;
+a2a2Sec = modA2A;
+b2b2Sec = modB2B;
+
+a2b5Sec = modA2B;
+b2a5Sec = modB2A;
+a2a5Sec = modA2A;
+b2b5Sec = modB2B;
+
+a2b10Sec = modA2B;
+b2a10Sec = modB2A;
+a2a10Sec = modA2A;
+b2b10Sec = modB2B;
+
+figure; 
+subplot(441); imagesc(lowFreqRange,gammaRange,squeeze(median(modIdxAllB2B{iRun,iDate},[1 4],'omitnan'))); 
+axis square; colorbar
+title('100 s window');
+set(gca,'YDir','normal');
+
+
 
 %% Plot the comodulogram - edit this
 % Average across all channels for the 4 combinations...
@@ -581,6 +605,9 @@ boxplot([median(correctedA2B(:,sigA2B),2) median(correctedB2A(:,sigB2A),2) ...
 connValsT = connValsAll(:,1:5);
 connValsT = reshape(connValsT,[1 numel(connValsT)]);connValsT(zeroVals) = [];
 
+distValsT = distSitesAll(:,1:5); 
+distValsT = reshape(distValsT,[1 numel(distValsT)]); distValsT(zeroVals)= [];
+
 [yIndex,edges] = discretize(connValsT,-0.4:0.1:0.8);
 loc1 = yIndex<=8; loc2 = yIndex>8;
 unlikePairs = (median(correctedA2B(:,sigA2B),2)+ median(correctedB2A(:,sigB2A),2))./2;
@@ -599,15 +626,50 @@ legend('FC<=0.3','FC>0.3','Location','northeast');
 
 %%
 figure;
-subplot(121); scatter(connValsT,unlikePairs,'filled');
+subplot(221); scatter(connValsT,unlikePairs,'filled');
 showLinearFit(connValsT',unlikePairs,-0.2,25,20); axis square;
 xlabel('Functional connectivity'); ylabel('Z-scored Modulation index');
-ylim([-2 35]);
+ylim([-2 35]); title('Between probes');
 
-subplot(122); scatter([connValsT connValsT],likePairs,'filled'); 
+subplot(222); scatter([connValsT connValsT],likePairs,'filled'); 
 showLinearFit([connValsT connValsT]',likePairs,-0.2,25,20); axis square;
 xlabel('Functional connectivity'); ylabel('Z-scored Modulation index');
+ylim([-2 35]); title('Within probe');
+
+subplot(223); scatter(distValsT,unlikePairs,'filled');
+showExpFit(distValsT',unlikePairs,15,25,20); axis square;
+xlabel('Distance'); ylabel('Z-scored Modulation index');
 ylim([-2 35]);
+
+subplot(224); scatter([distValsT distValsT],likePairs,'filled');
+showExpFit([distValsT distValsT]',likePairs,15,25,20); axis square;
+xlabel('Distance'); ylabel('Z-scored Modulation index');
+ylim([-2 35]);
+
+[rhoBtw,pBtw] = partialcorr(connValsT',unlikePairs,distValsT');
+[rhoLike,pLike] = partialcorr([connValsT connValsT]',likePairs,[distValsT distValsT]');
+
+%% Flag the modulation indices which are higher than 5
+highMIBtwFlag = unlikePairs>= 5; 
+
+highA2BBtw = a2bAll(highMIBtwFlag,:);
+highB2ABtw = b2aAll(highMIBtwFlag,:);
+
+highA2ABtw = a2aAll(likePairs(1:55)>=5,:);
+highB2BBtw = b2bAll(likePairs(56:end)>=5,:);
+
+figure;
+subplot(221); imagesc(lowFreqRange,gammaRange,squeeze(reshape(median(highA2BBtw,1,'omitnan'),[nHigh nLow])));
+clim([2 8]); title('A-B'); ylabel('Amplitude'); xlabel('Phase'); axis square; set(gca,'YDir','normal');colorbar;
+
+subplot(222); imagesc(lowFreqRange,gammaRange,squeeze(reshape(median(highB2ABtw,1,'omitnan'),[nHigh nLow])));
+clim([2 8]); title('B-A'); ylabel('Amplitude'); xlabel('Phase'); axis square; set(gca,'YDir','normal');colorbar; 
+
+subplot(223); imagesc(lowFreqRange,gammaRange,squeeze(reshape(median(highA2ABtw,1,'omitnan'),[nHigh nLow])));
+clim([2 8]); title('A-A'); ylabel('Amplitude'); xlabel('Phase'); axis square; set(gca,'YDir','normal'); colorbar;
+
+subplot(224); imagesc(lowFreqRange,gammaRange,squeeze(reshape(median(highB2BBtw,1,'omitnan'),[nHigh nLow])));
+clim([2 8]); title('B-B'); ylabel('Amplitude'); xlabel('Phase'); axis square; set(gca,'YDir','normal'); colorbar;
 
 
 %% 
