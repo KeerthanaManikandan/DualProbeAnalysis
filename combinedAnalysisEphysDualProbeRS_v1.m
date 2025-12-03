@@ -56,6 +56,7 @@ for iType = 1:3
     end
 end
 
+
 %% Bar plot of correlations vs timescales
 figure;
 bar(rhoVal,'BaseValue',-0.2); legend(bandLabels,'Location','northwest'); xticklabels({'Time series';'Power';'Infraslow'});
@@ -357,9 +358,15 @@ for iType = 1:3
 end
 
 figure; bar([laminarCorr(4,:) corrSuperMid(4,2) corrMidDeep(4,2) corrSuperDeep(4,2)]); 
+xticklabels({'S/S','M/M','D/D','S/M','M/D','S/D'});
 box off; 
 
-figure; boxplot([superAllCorr(:,4) midAllCorr(:,4) deepAllCorr(:,4) superMidPairPow(:,4) midDeepPairPow(:,4) superDeepPairPow(:,4)]);
+figure;
+for iPlot= 1:5
+    subplot(1,5,iPlot)
+    boxplot([superAllCorr(:,iPlot) midAllCorr(:,iPlot) deepAllCorr(:,iPlot) superMidPairPow(:,iPlot) midDeepPairPow(:,iPlot) superDeepPairPow(:,iPlot)],{'S/S','M/M','D/D','S/M','M/D','S/D'});
+    title(bandLabels{iPlot}); ylim([-1 1]); box off; 
+end
 
 %% 
 clear corrSuperMid corrMidDeep corrSuperDeep laminarCorr
@@ -369,7 +376,7 @@ pairClass(find(singleChRow)+42,:) =[];
 smLoc = sum(pairClass=='SM',2)==2;
 ssLoc = sum(pairClass=='SS',2)==2;
 mmLoc = sum(pairClass=='MM',2)==2;
-
+figure;
 for iPlot = 1:3
     switch iPlot
         case 1
@@ -399,23 +406,24 @@ for iPlot = 1:3
     [corrMidDeep(iPlot,:),pMidDeep(iPlot,:)]   = corr(midDeep,connNew,'Type','Spearman');
     [corrSuperDeep(iPlot,:),pSuperDeep(iPlot,:)]  = corr(superDeep,connNew,'Type','Spearman');
 
-    figure; 
-    subplot(121);
-    bar([laminarCorr(:,4)' corrSuperMid(iPlot,4) corrMidDeep(iPlot,4) corrSuperDeep(iPlot,4)]);
-    box off; ylim([0 0.6])
-    subplot(122); 
+     
+    subplot(1,3,iPlot);
+    % bar([laminarCorr(:,4)' corrSuperMid(iPlot,4) corrMidDeep(iPlot,4) corrSuperDeep(iPlot,4)]);
+    % box off; ylim([0 0.6])
+    % subplot(122); 
     boxplot([allSuper(:,4) allMid(:,4) allDeep(:,4) superMid(:,4) midDeep(:,4) superDeep(:,4)]);
     xticks(1:6); xticklabels({'Super-Super','Middle-Middle','Deep-Deep','Super-Mid','Mid-Deep','Super-Deep'});
    % swarmchart((1:6).*ones(size(allSuper,1),1),[allSuper(:,4) allMid(:,4) allDeep(:,4) superMid(:,4) midDeep(:,4) superDeep(:,4)],80,'Marker','.','YJitterWidth',0.2);
     box off; ylim([0 1]);
-    sgtitle(figTitle);
+    title(figTitle);
     [p(iPlot,:),~,stats{iPlot}] = anova1([allSuper(:,4) allMid(:,4) allDeep(:,4) superMid(:,4) midDeep(:,4) superDeep(:,4)],[],'off');
     [c{iPlot}] = multcompare(stats{iPlot},'CriticalValueType','bonferroni','Display','off');
+
+    % figure;imagesc([rAllSuper(1,4) rAllMid(1,4) rAllDeep(1,4) corrSuperMid(1,4) corrMidDeep(1,4) corrSuperDeep(1,4);...
+    %     rAllSuper(2,4) rAllMid(2,4) rAllDeep(2,4) corrSuperMid(2,4) corrMidDeep(2,4) corrSuperDeep(2,4);...
+    %     rAllSuper(3,4) rAllMid(3,4) rAllDeep(3,4) corrSuperMid(3,4) corrMidDeep(3,4) corrSuperDeep(3,4)]);
+    % colormap turbo; colorbar; clim([0 0.5]);
+    % yticks(1:3); yticklabels({'S-S','M-M','S-M'});
+    % xticks(1:6); xticklabels({'Super-Super','Middle-Middle','Deep-Deep','Super-Mid','Mid-Deep','Super-Deep'});
 end
 
-figure;imagesc([rAllSuper(1,4) rAllMid(1,4) rAllDeep(1,4) corrSuperMid(1,4) corrMidDeep(1,4) corrSuperDeep(1,4);...
-    rAllSuper(2,4) rAllMid(2,4) rAllDeep(2,4) corrSuperMid(2,4) corrMidDeep(2,4) corrSuperDeep(2,4);...
-    rAllSuper(3,4) rAllMid(3,4) rAllDeep(3,4) corrSuperMid(3,4) corrMidDeep(3,4) corrSuperDeep(3,4)]);
-colormap turbo; colorbar; clim([0 0.5]); 
-yticks(1:3); yticklabels({'S-S','M-M','S-M'}); 
-xticks(1:6); xticklabels({'Super-Super','Middle-Middle','Deep-Deep','Super-Mid','Mid-Deep','Super-Deep'});
