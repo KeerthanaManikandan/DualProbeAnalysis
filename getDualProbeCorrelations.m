@@ -1,10 +1,15 @@
-function [allVars] = getDualProbeCorrelations(monkeyName, hemisphere, allDates, datFileNumAll,allProbeData,...
-    badElecB,estChInCortexA,estChInCortexB,connValsAll,distSitesAll,goodRuns)
+function [allVars] = getDualProbeCorrelations(monkeyName, hemisphere, allDates, datFileNumAll,allProbeData,allBadTimes,...
+    badElecA,badElecB,estChInCortexA,estChInCortexB,connValsAll,distSitesAll,goodRuns)
 clear meanPSDEEG medPSDEEG  specAMeanAll specBMeanAll specAMedAll specBMedAll meanCorrInfraSlow medCorrInfraSlow
 fs = 1e3;
 [z,p,k] = butter(3,[0.01 0.1]./(fs/2),'bandpass');
 [sos,g] = zp2sos(z,p,k);
                             
+thetaBand = [6 8];    [bT,aT] = butter(3,thetaBand./(fs/2),'bandpass'); % Theta band filtering parameters
+alphaBand = [8 12];  [bA,aA] = butter(3,alphaBand./(fs/2),'bandpass');
+betaBand  = [13 30]; [bB,aB] = butter(3,betaBand./(fs/2),'bandpass');
+gammaBand = [30 90]; [bG,aG] = butter(3,gammaBand./(fs/2),'bandpass');
+
 bandLabels = {'Theta', 'Alpha', 'Beta', 'Gamma','Spiking'};
 freqCombs = nchoosek(1:size(bandLabels,2),2);
 

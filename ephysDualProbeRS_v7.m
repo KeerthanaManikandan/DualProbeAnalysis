@@ -35,7 +35,7 @@ saveFigureFlag = 0;
 chOutCortex    = 1:3;
 chDeep         = 30:32;
 
-iM = 2; % 1 - Charlie Sheen, 2 - Whiskey
+iM = 1; % 1 - Charlie Sheen, 2 - Whiskey
 switch iM
     case 1
         monkeyName = 'CharlieSheen';
@@ -91,8 +91,8 @@ disp(['Obtained/retrieved distance between probes, connectivity values, heart ra
 %% Get all pairwise correlations
 bandLabels = {'Theta', 'Alpha', 'Beta', 'Gamma','Spiking'};
 timeLabels = {'Time series','Power','Infraslow'};
-[allVars] = getDualProbeCorrelations(monkeyName, hemisphere, allDates, datFileNumAll,allProbeData,...
-    badElecB,estChInCortexA,estChInCortexB,connValsAll,distSitesAll,goodRuns);
+[allVars] = getDualProbeCorrelations(monkeyName, hemisphere, allDates, datFileNumAll,allProbeData,allBadTimes,...
+    badElecA,badElecB,estChInCortexA,estChInCortexB,connValsAll,distSitesAll,goodRuns);
 
 % Check plotting...
 
