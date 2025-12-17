@@ -13,16 +13,16 @@ hemisphere     = 'Left';
 
 %% Combine all monkey data
 for iM = 1:2
-    allMonkeyVars{iM} =  load(['D:\Data\' monkeys{iM} '_SqM\Left Hemisphere\DualProbeVars.mat']);
+    allMonkeyVars(iM) =  load(['D:\Data\' monkeys{iM} '_SqM\Left Hemisphere\DualProbeVars.mat']);
 end
 
-connVals = [allMonkeyVars{1}.connValsR; allMonkeyVars{2}.connValsR];
-distVals = [allMonkeyVars{1}.distValsR; allMonkeyVars{2}.distValsR];
+connVals = [allMonkeyVars(1).connValsR; allMonkeyVars(2).connValsR];
+distVals = [allMonkeyVars(1).distValsR; allMonkeyVars(2).distValsR];
 
 % Pairwise correlations
-medPairCorr      = [allMonkeyVars{1}.medPairCorrR; allMonkeyVars{2}.medPairCorrR];
-medEnvelopeCorr  = [allMonkeyVars{1}.medCorrEnvelopeR; allMonkeyVars{2}.medCorrEnvelopeR];
-medInfraSlowCorr = [allMonkeyVars{1}.medCorrInfraSlowR; allMonkeyVars{2}.medCorrInfraSlowR];
+medPairCorr      = [allMonkeyVars(1).medPairCorrR; allMonkeyVars(2).medPairCorrR];
+medEnvelopeCorr  = [allMonkeyVars(1).medCorrEnvelopeR; allMonkeyVars(2).medCorrEnvelopeR];
+medInfraSlowCorr = [allMonkeyVars(1).medCorrInfraSlowR; allMonkeyVars(2).medCorrInfraSlowR];
 
 %%
 bandLabels = {'Theta', 'Alpha', 'Beta', 'Gamma','Spiking'};
@@ -147,43 +147,43 @@ for iType = 1:3
     percentImportance(:,iType) = 100*relativeImportance(:,iType)./rsqDominance(iType);
 end
 %%
-singleChRow = cellfun(@(x) isscalar(x),allMonkeyVars{2}.intraCorrBR(:,1));
+singleChRow = cellfun(@(x) isscalar(x),allMonkeyVars(2).intraCorrBR(:,1));
 
-superMidPair = [(allMonkeyVars{1}.medPairASuperBMidR + allMonkeyVars{1}.medPairAMidBSuperR)./2 ; ...
-    (allMonkeyVars{2}.medPairASuperBMidR + allMonkeyVars{2}.medPairAMidBSuperR)./2];
+superMidPair = [(allMonkeyVars(1).medPairASuperBMidR + allMonkeyVars(1).medPairAMidBSuperR)./2 ; ...
+    (allMonkeyVars(2).medPairASuperBMidR + allMonkeyVars(2).medPairAMidBSuperR)./2];
 superMidPair(find(singleChRow)+42,:) = [];
 
-superDeepPair = [(allMonkeyVars{1}.medPairASuperBDeepR + allMonkeyVars{1}.medPairADeepBSuperR)./2 ; ...
-    (allMonkeyVars{2}.medPairASuperBDeepR + allMonkeyVars{2}.medPairADeepBSuperR)./2];
+superDeepPair = [(allMonkeyVars(1).medPairASuperBDeepR + allMonkeyVars(1).medPairADeepBSuperR)./2 ; ...
+    (allMonkeyVars(2).medPairASuperBDeepR + allMonkeyVars(2).medPairADeepBSuperR)./2];
 superDeepPair(find(singleChRow)+42,:) = [];
 
-midDeepPair = [(allMonkeyVars{1}.medPairAMidBDeepR + allMonkeyVars{1}.medPairADeepBMidR)./2 ; ...
-    (allMonkeyVars{2}.medPairAMidBDeepR + allMonkeyVars{2}.medPairADeepBMidR)./2];
+midDeepPair = [(allMonkeyVars(1).medPairAMidBDeepR + allMonkeyVars(1).medPairADeepBMidR)./2 ; ...
+    (allMonkeyVars(2).medPairAMidBDeepR + allMonkeyVars(2).medPairADeepBMidR)./2];
 midDeepPair(find(singleChRow)+42,:) = [];
 
 %
-superMidPairPow = [(allMonkeyVars{1}.envelopeASuperBMidR + allMonkeyVars{1}.envelopeAMidBSuperR)./2 ; ...
-    (allMonkeyVars{2}.envelopeASuperBMidR + allMonkeyVars{2}.envelopeAMidBSuperR)./2];
+superMidPairPow = [(allMonkeyVars(1).envelopeASuperBMidR + allMonkeyVars(1).envelopeAMidBSuperR)./2 ; ...
+    (allMonkeyVars(2).envelopeASuperBMidR + allMonkeyVars(2).envelopeAMidBSuperR)./2];
 superMidPairPow(find(singleChRow)+42,:) = [];
 
-superDeepPairPow = [(allMonkeyVars{1}.envelopeADeepBSuperR + allMonkeyVars{1}.envelopeASuperBDeepR)./2 ; ...
-    (allMonkeyVars{2}.envelopeADeepBSuperR + allMonkeyVars{2}.envelopeASuperBDeepR)./2];
+superDeepPairPow = [(allMonkeyVars(1).envelopeADeepBSuperR + allMonkeyVars(1).envelopeASuperBDeepR)./2 ; ...
+    (allMonkeyVars(2).envelopeADeepBSuperR + allMonkeyVars(2).envelopeASuperBDeepR)./2];
 superDeepPairPow(find(singleChRow)+42,:) = [];
 
-midDeepPairPow = [(allMonkeyVars{1}.envelopeAMidBDeepR + allMonkeyVars{1}.envelopeADeepBMidR)./2 ; ...
-    (allMonkeyVars{2}.envelopeAMidBDeepR + allMonkeyVars{2}.envelopeADeepBMidR)./2];
+midDeepPairPow = [(allMonkeyVars(1).envelopeAMidBDeepR + allMonkeyVars(1).envelopeADeepBMidR)./2 ; ...
+    (allMonkeyVars(2).envelopeAMidBDeepR + allMonkeyVars(2).envelopeADeepBMidR)./2];
 midDeepPairPow(find(singleChRow)+42,:) = [];
 %
-superMidPairInfra = [(allMonkeyVars{1}.infraASuperBMidR + allMonkeyVars{1}. infraAMidBSuperR)./2 ; ...
-    (allMonkeyVars{2}.infraASuperBMidR + allMonkeyVars{2}. infraAMidBSuperR)./2];
+superMidPairInfra = [(allMonkeyVars(1).infraASuperBMidR + allMonkeyVars(1). infraAMidBSuperR)./2 ; ...
+    (allMonkeyVars(2).infraASuperBMidR + allMonkeyVars(2). infraAMidBSuperR)./2];
 superMidPairInfra(find(singleChRow)+42,:) = [];
 
-superDeepPairInfra = [(allMonkeyVars{1}.infraASuperBDeepR + allMonkeyVars{1}.infraADeepBSuperR)./2 ; ...
-    (allMonkeyVars{2}.infraASuperBDeepR + allMonkeyVars{2}.infraADeepBSuperR)./2];
+superDeepPairInfra = [(allMonkeyVars(1).infraASuperBDeepR + allMonkeyVars(1).infraADeepBSuperR)./2 ; ...
+    (allMonkeyVars(2).infraASuperBDeepR + allMonkeyVars(2).infraADeepBSuperR)./2];
 superDeepPairInfra(find(singleChRow)+42,:) = [];
 
-midDeepPairInfra = [(allMonkeyVars{1}.infraAMidBDeepR + allMonkeyVars{1}.infraADeepBMidR)./2 ; ...
-    (allMonkeyVars{2}.infraAMidBDeepR + allMonkeyVars{2}. infraADeepBMidR)./2];
+midDeepPairInfra = [(allMonkeyVars(1).infraAMidBDeepR + allMonkeyVars(1).infraADeepBMidR)./2 ; ...
+    (allMonkeyVars(2).infraAMidBDeepR + allMonkeyVars(2). infraADeepBMidR)./2];
 midDeepPairInfra(find(singleChRow)+42,:) = [];
 
 
@@ -328,9 +328,9 @@ yticks(1:3);yticklabels({'S-M','M-D','S-D'}); xticks(1:5); xticklabels(bandLabel
 % badDatIdx = [badDatIdx; 77;78;79]; % Remove anesthesia controls from data
 
 %% 
-superAllCorr = [allMonkeyVars{1}.envelopePairCorrSuperR; allMonkeyVars{2}.envelopePairCorrSuperR];
-midAllCorr   = [allMonkeyVars{1}.envelopePairCorrMidR; allMonkeyVars{2}.envelopePairCorrMidR];
-deepAllCorr  = [allMonkeyVars{1}.envelopePairCorrDeepR; allMonkeyVars{2}.envelopePairCorrDeepR];
+superAllCorr = [allMonkeyVars(1).envelopePairCorrSuperR; allMonkeyVars(2).envelopePairCorrSuperR];
+midAllCorr   = [allMonkeyVars(1).envelopePairCorrMidR; allMonkeyVars(2).envelopePairCorrMidR];
+deepAllCorr  = [allMonkeyVars(1).envelopePairCorrDeepR; allMonkeyVars(2).envelopePairCorrDeepR];
 
 superAllCorr(find(singleChRow)+42,:) = [];
 midAllCorr(find(singleChRow)+42,:) = [];
@@ -362,20 +362,134 @@ xticklabels({'S/S','M/M','D/D','S/M','M/D','S/D'});
 box off; 
 
 figure;
-for iPlot= 1:5
+for iPlot = 1:5
     subplot(1,5,iPlot)
     boxplot([superAllCorr(:,iPlot) midAllCorr(:,iPlot) deepAllCorr(:,iPlot) superMidPairPow(:,iPlot) midDeepPairPow(:,iPlot) superDeepPairPow(:,iPlot)],{'S/S','M/M','D/D','S/M','M/D','S/D'});
     title(bandLabels{iPlot}); ylim([-1 1]); box off; 
 end
 
 %% 
+for iBand = 1:5
+    figure;
+    subplot(131); boxplot([superAllCorr(:,iBand) superMidPairPow(:,iBand) superDeepPairPow(:,iBand)],{'S/S','S/M','S/D'});ylim([-0.2 1]); box off; title('Superficial');axis square;
+    subplot(132); boxplot([midAllCorr(:,iBand) superMidPairPow(:,iBand) midDeepPairPow(:,iBand)],{'M/M','M/S','M/D'});ylim([-0.2 1]); box off; title('Middle');axis square;
+    subplot(133); boxplot([deepAllCorr(:,iBand)  superDeepPairPow(:,iBand) midDeepPairPow(:,iBand)],{'D/D','D/S','D/M'});ylim([-0.2 1]); box off; title('Deep');axis square;
+    sgtitle(bandLabels{iBand}); ylim([-0.2 1]); box off; 
+end
+
+%% Keeping superficial, middle, deep as reference and obtaining the distributions
+figure;
+for iBand = 1:5
+    subplot(2,3,iBand);
+    boxplot([[superAllCorr(:,iBand); superMidPairPow(:,iBand); superDeepPairPow(:,iBand)] ...
+        [midAllCorr(:,iBand); superMidPairPow(:,iBand); midDeepPairPow(:,iBand)]...
+        [deepAllCorr(:,iBand) ; superDeepPairPow(:,iBand); midDeepPairPow(:,iBand)]],{'Superficial','Middle','Deep'});
+    title(bandLabels{iBand}); ylim([-0.2 1]); box off; 
+
+end
+
+%% 
 clear corrSuperMid corrMidDeep corrSuperDeep laminarCorr
-pairClass = [allMonkeyVars{1}.pairClass; allMonkeyVars{2}.pairClass];
+pairClass = [allMonkeyVars(1).pairClass; allMonkeyVars(2).pairClass];
 pairClass(find(singleChRow)+42,:) =[];
 
 smLoc = sum(pairClass=='SM',2)==2;
 ssLoc = sum(pairClass=='SS',2)==2;
 mmLoc = sum(pairClass=='MM',2)==2;
+
+%%
+for iVal = 1:3
+    figure;
+    switch iVal
+        case 1
+            val = ssLoc;
+            figTitle ='Somatosensory-Somatosensory';
+        case 2
+            val = mmLoc;
+            figTitle ='Motor-Motor';
+        case 3
+            val = smLoc;
+            figTitle ='Somatosensory-Motor';
+    end
+    for iBand = 1:5
+        subplot(2,3,iBand);
+        boxplot([[superAllCorr(val,iBand); superMidPairPow(val,iBand); superDeepPairPow(val,iBand)] ...
+            [midAllCorr(val,iBand); superMidPairPow(val,iBand); midDeepPairPow(val,iBand)]...
+            [deepAllCorr(val,iBand) ; superDeepPairPow(val,iBand); midDeepPairPow(val,iBand)]],{'Superficial','Middle','Deep'});
+        title(bandLabels{iBand}); ylim([-0.2 1]); box off;
+    end
+    sgtitle(figTitle);
+end
+%%
+figure; idx = 1;
+for iLayer = 1: 3
+    for iBand = 1:5
+        switch iLayer
+            case 1
+                ss = [superAllCorr(ssLoc,iBand); superMidPairPow(ssLoc,iBand); superDeepPairPow(ssLoc,iBand)];
+                mm = [superAllCorr(mmLoc,iBand); superMidPairPow(mmLoc,iBand); superDeepPairPow(mmLoc,iBand)];
+                sm = [superAllCorr(smLoc,iBand); superMidPairPow(smLoc,iBand); superDeepPairPow(smLoc,iBand)];
+            case 2
+                ss =  [midAllCorr(ssLoc,iBand); superMidPairPow(ssLoc,iBand); midDeepPairPow(ssLoc,iBand)];
+                mm =  [midAllCorr(mmLoc,iBand); superMidPairPow(mmLoc,iBand); midDeepPairPow(mmLoc,iBand)];
+                sm =   [midAllCorr(smLoc,iBand); superMidPairPow(smLoc,iBand); midDeepPairPow(smLoc,iBand)];
+            case 3
+                ss = [deepAllCorr(ssLoc,iBand) ; superDeepPairPow(ssLoc,iBand); midDeepPairPow(ssLoc,iBand)];
+                mm = [deepAllCorr(mmLoc,iBand) ; superDeepPairPow(mmLoc,iBand); midDeepPairPow(mmLoc,iBand)];
+                sm = [deepAllCorr(smLoc,iBand) ; superDeepPairPow(smLoc,iBand); midDeepPairPow(smLoc,iBand)];
+        end
+
+        % s1_s1 = [[superAllCorr(ssLoc,iBand); superMidPairPow(ssLoc,iBand); superDeepPairPow(ssLoc,iBand)]; ...
+        %             [midAllCorr(ssLoc,iBand); superMidPairPow(ssLoc,iBand); midDeepPairPow(ssLoc,iBand)];...
+        %             [deepAllCorr(ssLoc,iBand) ; superDeepPairPow(ssLoc,iBand); midDeepPairPow(ssLoc,iBand)]];
+        %
+        % m1_m1 = [[superAllCorr(mmLoc,iBand); superMidPairPow(mmLoc,iBand); superDeepPairPow(mmLoc,iBand)]; ...
+        %             [midAllCorr(mmLoc,iBand); superMidPairPow(mmLoc,iBand); midDeepPairPow(mmLoc,iBand)];...
+        %             [deepAllCorr(mmLoc,iBand) ; superDeepPairPow(mmLoc,iBand); midDeepPairPow(mmLoc,iBand)]];
+        %
+        % s1_m1 = [[superAllCorr(smLoc,iBand); superMidPairPow(smLoc,iBand); superDeepPairPow(smLoc,iBand)]; ...
+        %             [midAllCorr(smLoc,iBand); superMidPairPow(smLoc,iBand); midDeepPairPow(smLoc,iBand)];...
+        %             [deepAllCorr(smLoc,iBand) ; superDeepPairPow(smLoc,iBand); midDeepPairPow(smLoc,iBand)]];
+        % allValsMed(iBand,:) = [median(ss,1) median(mm,1) median(sm,1)];
+        subplot(3,5,idx); boxplot([ss [mm; NaN(9,1)] [sm; NaN(18,1)]],{'S1/S1','M1/M1','S1/M1'});
+        title(bandLabels{iBand}); ylim([-0.2 1]); box off; idx = idx+1;
+        [p(iLayer,iBand),~,s{iLayer,iBand}] = anova1([ss [mm; NaN(9,1)] [sm; NaN(18,1)]],{'S1/S1','M1/M1','S1/M1'},'off');
+    end
+end
+
+%%
+for iVal = 1:3
+    figure;
+    switch iVal
+        case 1
+            val = ssLoc;
+            figTitle ='Somatosensory-Somatosensory';
+        case 2
+            val = mmLoc;
+            figTitle ='Motor-Motor';
+        case 3
+            val = smLoc;
+            figTitle ='Somatosensory-Motor';
+    end
+    idx = 1; 
+   for iBand = 1:5
+       subplot(5,3,idx); boxplot([superAllCorr(val,iBand) superMidPairPow(val,iBand) superDeepPairPow(val,iBand)],{'S/S','S/M','S/D'});
+       ylim([-0.2 1]); box off; title('Superficial');axis equal; ylabel([bandLabels{iBand} ' - Correlation'])
+       subplot(5,3,idx+1); boxplot([midAllCorr(val,iBand) superMidPairPow(val,iBand) midDeepPairPow(val,iBand)],{'M/M','M/S','M/D'});
+       ylim([-0.2 1]); box off; title('Middle');axis equal;
+       subplot(5,3,idx+2); boxplot([deepAllCorr(val,iBand)  superDeepPairPow(val,iBand) midDeepPairPow(val,iBand)],{'D/D','D/S','D/M'});ylim([-0.2 1]); 
+       box off; title('Deep');axis equal;
+       ylim([-0.2 1]);
+       idx = idx+3;
+       [pValAll(iBand,1,iVal),~,statValAll{iBand,1,iVal}]= anova1([superAllCorr(val,iBand) superMidPairPow(val,iBand) superDeepPairPow(val,iBand)],{'S/S','S/M','S/D'},'off');
+       [pValAll(iBand,2,iVal),~,statValAll{iBand,2,iVal}]= anova1([midAllCorr(val,iBand) superMidPairPow(val,iBand) midDeepPairPow(val,iBand)],{'M/M','M/S','M/D'},'off');
+       [pValAll(iBand,3,iVal),~,statValAll{iBand,3,iVal}]= anova1([deepAllCorr(val,iBand)  superDeepPairPow(val,iBand) midDeepPairPow(val,iBand)],{'D/D','D/S','D/M'},'off');      
+   end
+    sgtitle(figTitle);
+end
+
+
+%%
 figure;
 for iPlot = 1:3
     switch iPlot
