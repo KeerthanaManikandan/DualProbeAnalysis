@@ -35,7 +35,7 @@ saveFigureFlag = 0;
 chOutCortex    = 1:3;
 chDeep         = 30:32;
 
-iM = 1; % 1 - Charlie Sheen, 2 - Whiskey
+iM = 2; % 1 - Charlie Sheen, 2 - Whiskey
 switch iM
     case 1
         monkeyName = 'CharlieSheen';
@@ -115,7 +115,7 @@ winSize  = 2e3;
 stepSize = 2e3;
 
 % Get the phase amplitude coupling for the recordings...
-for iDate = 2:5%size(allDates,1)
+for iDate = 2:3%size(allDates,1)
     clear expDate datFileNum saveFolder
     expDate    = allDates(iDate,:);
     datFileNum = datFileNumAll{iDate,1};
@@ -213,27 +213,37 @@ for iDate = 2:5%size(allDates,1)
 end
 
 %% 
-a2b2Sec = modA2B;
-b2a2Sec = modB2A;
-a2a2Sec = modA2A;
-b2b2Sec = modB2B;
 
-a2b5Sec = modA2B;
-b2a5Sec = modB2A;
-a2a5Sec = modA2A;
-b2b5Sec = modB2B;
+modIdxAllA2B=modIdxAllA2B2sec;
+modIdxAllB2A=modIdxAllB2A2sec;
+modIdxAllA2A=modIdxAllA2A2sec;
+modIdxAllB2B=modIdxAllB2B2sec;
 
-a2b10Sec = modA2B;
-b2a10Sec = modB2A;
-a2a10Sec = modA2A;
-b2b10Sec = modB2B;
+a2b2Sec = modIdxAllA2B2sec{iRun,iDate};
+b2a2Sec = modIdxAllB2A2sec{iRun,iDate};
+a2a2Sec = modIdxAllA2A2sec{iRun,iDate};
+b2b2Sec = modIdxAllB2B2sec{iRun,iDate};
 
+% a2b5Sec = modA2B;
+% b2a5Sec = modB2A;
+% a2a5Sec = modA2A;
+% b2b5Sec = modB2B;
+% 
+% a2b10Sec = modA2B;
+% b2a10Sec = modB2A;
+% a2a10Sec = modA2A;
+% b2b10Sec = modB2B;
+
+iRun = 1; iDate = 3;
+%%
 figure; 
-subplot(441); imagesc(lowFreqRange,gammaRange,squeeze(median(modIdxAllB2B{iRun,iDate},[1 4],'omitnan'))); 
-axis square; colorbar
-title('100 s window');
+subplot(121); imagesc(lowFreqRange,gammaRange,squeeze(mean(modIdxAllA2B{iRun,iDate},[1 4],'omitnan'))); 
+axis square; colorbar; clim([0 2.5e-3]);
+% title('100 s window');
 set(gca,'YDir','normal');
-
+% shuffTest = modIdxAllA2BShuffleT;
+subplot(122);imagesc(lowFreqRange,gammaRange,squeeze(mean( modIdxAllA2BShuffle{iRun,iDate},[1 2 5],'omitnan')))
+axis square; colorbar;set(gca,'YDir','normal');clim([0 2.5e-3]);
 
 
 %% Plot the comodulogram - edit this
@@ -244,10 +254,10 @@ avgModA2A = squeeze(mean(modIdxAllA2A{iRun,iDate} ,1,'omitnan'));%squeeze(mean(m
 avgModB2B = squeeze(mean(modIdxAllB2B{iRun,iDate} ,1,'omitnan'));%squeeze(mean(modIdxAllB2A{5,2},1,'omitnan'));
 
 figure;
-subplot(221); contourf(lowFreqRange,gammaRange,median(avgModA2B,3,'omitnan'),'lines','none'); clim([0 1e-4]); colorbar; colormap jet; title('A--B');
-subplot(222); contourf(lowFreqRange,gammaRange,median(avgModB2A,3,'omitnan'),'lines','none');clim([0 1e-4]) ;colorbar; colormap jet;title('B--A');
-subplot(223); contourf(lowFreqRange,gammaRange,median(avgModA2A,3,'omitnan'),'lines','none'); clim([0 1e-4]); colorbar; colormap jet;title('A--A');
-subplot(224); contourf(lowFreqRange,gammaRange,median(avgModB2B,3,'omitnan'),'lines','none');clim([0 1e-4]) ;colorbar; colormap jet;title('B--B');
+subplot(221); contourf(lowFreqRange,gammaRange,median(avgModA2B,3,'omitnan'),'lines','none'); clim([0 3e-3]); colorbar; colormap jet; title('A--B');
+subplot(222); contourf(lowFreqRange,gammaRange,median(avgModB2A,3,'omitnan'),'lines','none');clim([0 3e-3]) ;colorbar; colormap jet;title('B--A');
+subplot(223); contourf(lowFreqRange,gammaRange,median(avgModA2A,3,'omitnan'),'lines','none'); clim([0 3e-3]); colorbar; colormap jet;title('A--A');
+subplot(224); contourf(lowFreqRange,gammaRange,median(avgModB2B,3,'omitnan'),'lines','none');clim([0 3e-3]) ;colorbar; colormap jet;title('B--B');
 
 % Plot it for all channels
 for iPlot = 1:4
@@ -278,19 +288,16 @@ for iPlot = 1:4
 end
 
 % Plot for compartments....
-%% Circular shifting the comodulogram
-
 
 %% Shuffling the windows in increments
 % winSize = [10 20 30 40 50 100].*1e3;
 nHigh = size(gammaRange,2);
 nLow  = size(lowFreqRange,2);
 
-
 % shiftLen = [1 5 10 20 50 100].*1e3;
 % nShift   = length(shiftLen);
 
-for iDate = 2:5
+for iDate = 2:3
     expDate    = allDates(iDate,:);
     datFileNum = datFileNumAll{iDate,1};
 
@@ -300,14 +307,14 @@ for iDate = 2:5
         chB = estChInCortexB{iDate}(iRun,:);
         if chA(1)== 0 || chB(1)==0; continue; end
         if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate...
-                '\Electrophysiology\modulogramCtrl_' num2str(fileNum) '.mat'],'file')
+                '\Electrophysiology\modulogramCtrl2Sec_' num2str(fileNum) '.mat'],'file')
             clc; disp(['Processing data for ' monkeyName ': Date: ' allDates(iDate,:) ' ; File: ' num2str(fileNum)]);
-
+%%
             [amplitudeA, amplitudeB, phaseA, phaseB] = calculatePhaseAmpSignals(monkeyName,expDate,hemisphere,fileNum,...
                 allProbeData{fileNum,iDate}.probe1Ch,allProbeData{fileNum,iDate}.probe2Ch,badElecA{fileNum,iDate},...
                 badElecB{fileNum,iDate},allBadTimes{fileNum,iDate},estChInCortexA{iDate}(iRun,:),...
                 estChInCortexB{iDate}(iRun,:),gammaRange,lowFreqRange);
-
+%%
             dataLen = size(amplitudeA,2);
             nChan      = min(size(amplitudeA,3),size(amplitudeB,3));
 
@@ -317,8 +324,8 @@ for iDate = 2:5
             phaseB     = phaseB(:,:,1:nChan);
 
 
-            winStart = 1:100e3:(dataLen-100e3);
-            winEnd   = winStart+100e3-1;
+            winStart = 1:2e3:(dataLen-2e3);
+            winEnd   = winStart+2e3-1;
             nWin     = numel(winStart);
 
             modIdxAllA2BShuffleT = NaN(5,nWin,nHigh,nLow,nChan); % size is shift length x # time windows x high freq x low freq x # channels
@@ -331,15 +338,15 @@ for iDate = 2:5
             clear phaseAShuff phaseBShuff
             phaseAShuff = ones([5,size(phaseA)],'single');
             phaseBShuff = ones([5,size(phaseB)],'single');
-            winSize = 10e3;
+            winSize = 2e3;
 
             for iRep = 1:5
                 rng('shuffle');
-                comb1 = randperm(round(dataLen/10e3));
+                comb1 = randperm(round(dataLen/1e3));
                 rowIdx = 1;
                 for iL = 1:length(comb1)
                     clear win1
-                    win1 = ((comb1(iL)-1)*winSize+1 : (comb1(iL)-1)*winSize+winSize);
+                    win1 = ((comb1(iL))*winSize+1 : (comb1(iL))*winSize+winSize);
                     win1(win1>dataLen) = [];
                     numWin1 = length(win1);
                     phaseAShuff(iRep,:,rowIdx:rowIdx+numWin1-1, :) = phaseA(:,win1, :);
@@ -351,8 +358,8 @@ for iDate = 2:5
             % Get the PAC
 
             % Calculate windows
-            winStart = 1:100e3:(dataLen-100e3);
-            winEnd   = winStart+100e3-1;
+            winStart = 1:2e3:(dataLen-2e3);
+            winEnd   = winStart+2e3-1;
             nWin     = numel(winStart);
 
             highFreqAconst = parallel.pool.Constant(amplitudeA);
@@ -396,7 +403,7 @@ for iDate = 2:5
                 modIdxAllB2BShuffleT(iRep,iWin,iHigh,iLow,:) = modShuffleB2B{iC};
             end
 
-            save(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramCtrl_' num2str(fileNum) '.mat'],...
+            save(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramCtrl2Sec_' num2str(fileNum) '.mat'],...
                 'modIdxAllA2BShuffleT','modIdxAllB2AShuffleT','modIdxAllA2AShuffleT','modIdxAllB2BShuffleT');
 
 
@@ -535,7 +542,7 @@ for iDate = 2:5
 
         else
             clear allCtrlVals
-            allCtrlVals = matfile(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramCtrl_' num2str(fileNum) '.mat']);
+            allCtrlVals = matfile(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramCtrl2Sec_' num2str(fileNum) '.mat']);
             modIdxAllA2BShuffle{iRun,iDate} = allCtrlVals.modIdxAllA2BShuffleT;
             modIdxAllB2AShuffle{iRun,iDate} = allCtrlVals.modIdxAllB2AShuffleT;
             modIdxAllA2AShuffle{iRun,iDate} = allCtrlVals.modIdxAllA2AShuffleT;
@@ -543,6 +550,7 @@ for iDate = 2:5
         end
     end
 end
+
 %%
 modIdxAllA2B95 = reshape(cellfun(@(x) reshape(squeeze(median(x,5,'omitnan')),[size(x,1)*size(x,2) nHigh*nLow]),modIdxAllA2BShuffle,'UniformOutput',false),[1 numel(modIdxAllA2BShuffle)]);
 zeroVals = cell2mat(cellfun(@(x) isempty(x), modIdxAllA2B95,'un',0));
@@ -568,10 +576,10 @@ modIdxAllB2B95(cell2mat(cellfun(@(x) isempty(x), modIdxAllB2B95,'un',0))) = [];
 % correctedB2A = cellfun(@(x,y) (squeeze(median(y,[1 4],'omitnan'))>x),modIdxAllB2A95,modIdxAllB2A,'un',0);
 % correctedA2A = cellfun(@(x,y) (squeeze(median(y,[1 4],'omitnan'))>x),modIdxAllA2A95,modIdxAllA2A,'un',0);
 % correctedB2B = cellfun(@(x,y) (squeeze(median(y,[1 4],'omitnan'))>x),modIdxAllB2B95,modIdxAllB2B,'un',0);
-modIdxAllA2BR = reshape(modIdxAllA2B,[1 numel(modIdxAllA2B)]); modIdxAllA2BR(cell2mat(cellfun(@(x) isempty(x), modIdxAllA2BR,'un',0))) = [];
-modIdxAllB2AR = reshape(modIdxAllA2B,[1 numel(modIdxAllA2B)]); modIdxAllB2AR(cell2mat(cellfun(@(x) isempty(x), modIdxAllB2AR,'un',0))) = [];
-modIdxAllA2AR = reshape(modIdxAllA2B,[1 numel(modIdxAllA2B)]); modIdxAllA2AR(cell2mat(cellfun(@(x) isempty(x), modIdxAllA2AR,'un',0))) = [];
-modIdxAllB2BR = reshape(modIdxAllA2B,[1 numel(modIdxAllA2B)]); modIdxAllB2BR(cell2mat(cellfun(@(x) isempty(x), modIdxAllB2BR,'un',0))) = [];
+modIdxAllA2BR = reshape(modIdxAllA2B(1:15,1:3),[1 numel(modIdxAllA2B(1:15,1:3))]); modIdxAllA2BR(cell2mat(cellfun(@(x) isempty(x), modIdxAllA2BR,'un',0))) = [];
+modIdxAllB2AR = reshape(modIdxAllB2A(1:15,1:3),[1 numel(modIdxAllA2B(1:15,1:3))]); modIdxAllB2AR(cell2mat(cellfun(@(x) isempty(x), modIdxAllB2AR,'un',0))) = [];
+modIdxAllA2AR = reshape(modIdxAllA2A(1:15,1:3),[1 numel(modIdxAllA2B(1:15,1:3))]); modIdxAllA2AR(cell2mat(cellfun(@(x) isempty(x), modIdxAllA2AR,'un',0))) = [];
+modIdxAllB2BR = reshape(modIdxAllB2B(1:15,1:3),[1 numel(modIdxAllA2B(1:15,1:3))]); modIdxAllB2BR(cell2mat(cellfun(@(x) isempty(x), modIdxAllB2BR,'un',0))) = [];
 
 %%
 correctedA2B = cell2mat(cellfun(@(x,y) (reshape(squeeze(median(y,[1 4],'omitnan')),[1 nHigh*nLow])-mean(x,1,'omitnan'))./std(x),modIdxAllA2B95,modIdxAllA2BR,'un',0)');
@@ -579,10 +587,10 @@ correctedB2A = cell2mat(cellfun(@(x,y) (reshape(squeeze(median(y,[1 4],'omitnan'
 correctedA2A = cell2mat(cellfun(@(x,y) (reshape(squeeze(median(y,[1 4],'omitnan')),[1 nHigh*nLow])-mean(x,1,'omitnan'))./std(x),modIdxAllA2A95,modIdxAllA2AR,'un',0)');
 correctedB2B = cell2mat(cellfun(@(x,y) (reshape(squeeze(median(y,[1 4],'omitnan')),[1 nHigh*nLow])-mean(x,1,'omitnan'))./std(x),modIdxAllB2B95,modIdxAllB2BR,'un',0)');
 
-meanA2B = mean(correctedA2B,1); sigA2B = meanA2B>1.96;
-meanB2A = mean(correctedB2A,1); sigB2A = meanB2A>1.96;
-meanA2A = mean(correctedA2A,1); sigA2A = meanA2A>1.96;
-meanB2B = mean(correctedB2B,1); sigB2B = meanB2B>1.96; 
+meanA2B = median(correctedA2B,1); sigA2B = meanA2B>1.96;
+meanB2A = median(correctedB2A,1); sigB2A = meanB2A>1.96;
+meanA2A = median(correctedA2A,1); sigA2A = meanA2A>1.96;
+meanB2B = median(correctedB2B,1); sigB2B = meanB2B>1.96; 
 
 commonPairs = sigA2B & sigB2A & sigA2A & sigB2A;
 
