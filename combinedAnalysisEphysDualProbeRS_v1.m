@@ -108,7 +108,6 @@ text(-0.2, 0.7,['R^2 : ' num2str(mdl.Rsquared.Ordinary*100) '%']);
 text(-0.2, 0.65,['p-val: ' num2str(mdl.Coefficients.pValue(2))]);
 
 %% Plot 
-
 for iType = 1:3
     switch iType
         case 1
@@ -336,12 +335,11 @@ superAllCorr(find(singleChRow)+42,:) = [];
 midAllCorr(find(singleChRow)+42,:) = [];
 deepAllCorr(find(singleChRow)+42,:) = [];
 
-
 laminarCorr = [corr(superAllCorr,connValsNew) corr(midAllCorr,connValsNew) corr(deepAllCorr,connValsNew)];
 figure; imagesc(laminarCorr'); colorbar
 colormap jet;  axis square; clim([0 0.5]);
 
-
+% Plot the distribution of correlation
 for iType = 1:3
     clear var
     switch iType
@@ -388,6 +386,26 @@ for iBand = 1:5
 
 end
 
+% Plotting the main effects
+figure;
+subplot(121);boxplot([[superAllCorr; superMidPairPow; superDeepPairPow]; ...
+        [midAllCorr; superMidPairPow; midDeepPairPow];...
+        [deepAllCorr ; superDeepPairPow; midDeepPairPow]],bandLabels);
+ylim([-0.1 1]); box off; 
+
+subplot(122); boxplot([reshape([superAllCorr; superMidPairPow; superDeepPairPow],[],1) ...
+        reshape([midAllCorr; superMidPairPow; midDeepPairPow],[],1)...
+        reshape([deepAllCorr ; superDeepPairPow; midDeepPairPow],[],1)],...
+        {'Superficial','Middle','Deep'})
+ylim([-0.1 1]); box off; 
+
+
+% Show gamma and alpha
+figure;boxplot([[superAllCorr(:,[2 4]); superMidPairPow(:,[2 4]); superDeepPairPow(:,[2 4])] ...
+        [midAllCorr(:,[2 4]); superMidPairPow(:,[2 4]); midDeepPairPow(:,[2 4])]...
+        [deepAllCorr(:,[2 4]) ; superDeepPairPow(:,[2 4]); midDeepPairPow(:,[2 4])]],...
+        {'S-Alpha','S-Gamma','M-Alpha','M-Gamma','D-Alpha','D-Gamma'});
+ylim([-0.1 1]); box off; 
 %% 
 clear corrSuperMid corrMidDeep corrSuperDeep laminarCorr
 pairClass = [allMonkeyVars(1).pairClass; allMonkeyVars(2).pairClass];
@@ -396,6 +414,16 @@ pairClass(find(singleChRow)+42,:) =[];
 smLoc = sum(pairClass=='SM',2)==2;
 ssLoc = sum(pairClass=='SS',2)==2;
 mmLoc = sum(pairClass=='MM',2)==2;
+
+% Plot interaction between gamma and site identity
+allVals = [[superAllCorr; superMidPairPow; superDeepPairPow]; ...
+        [midAllCorr; superMidPairPow; midDeepPairPow];...
+        [deepAllCorr ; superDeepPairPow; midDeepPairPow]];
+
+figure;boxplot([allVals(repmat(ssLoc,[9 1]),4) [NaN(27,1); allVals(repmat(mmLoc,[9 1]),4)] ...
+    [NaN(54,1); allVals(repmat(smLoc,[9 1]),4)]],{'S1-S1','Motor-Motor','S1-Motor'});
+box off; ylim([-0.1 1]);
+title('Interaction - frequency x site pair identity');
 
 %%
 for iVal = 1:3
