@@ -23,10 +23,16 @@ amplitudeCol = amplitudeVal(:);
 % Create a grouping index for each column
 numColumns = size(bin, 2);
 numRows = size(bin, 1);
-groupIdx = repelem(1:numColumns, numRows)'; % repeats each column index for all its rows
+
+if numColumns~=1 % To account for single channels
+    groupIdx = repelem(1:numColumns, numRows)'; % repeats each column index for all its rows
+    pj = accumarray([binCol, groupIdx], amplitudeCol, [], @mean);
+else
+    pj = accumarray(binCol,amplitudeCol,[],@mean);
+end
 
 % pj = mean(amplitude) at phase j
-pj = accumarray([binCol, groupIdx], amplitudeCol, [], @mean);
+
 pj = pj./sum(pj,1,'omitnan'); % normalized pac = pj/sum(pj for j= 1:n) % The sum should be equal to 1
 
 % Calculate modulation index
@@ -43,3 +49,4 @@ if plotVar
 end
 
 end
+
