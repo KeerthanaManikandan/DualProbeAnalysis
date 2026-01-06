@@ -386,25 +386,25 @@ for iBand = 1:5
 
 end
 
-% Plotting the main effects
+%% Plotting the main effects
 figure;
-subplot(121);boxplot([[superAllCorr; superMidPairPow; superDeepPairPow]; ...
+subplot(121);violin([[superAllCorr; superMidPairPow; superDeepPairPow]; ...
         [midAllCorr; superMidPairPow; midDeepPairPow];...
-        [deepAllCorr ; superDeepPairPow; midDeepPairPow]],bandLabels);
+        [deepAllCorr ; superDeepPairPow; midDeepPairPow]],'xlabel',bandLabels,'bw',0.015,'edgecolor','none');
 ylim([-0.1 1]); box off; 
 
-subplot(122); boxplot([reshape([superAllCorr; superMidPairPow; superDeepPairPow],[],1) ...
+subplot(122);  violin([reshape([superAllCorr; superMidPairPow; superDeepPairPow],[],1) ...
         reshape([midAllCorr; superMidPairPow; midDeepPairPow],[],1)...
         reshape([deepAllCorr ; superDeepPairPow; midDeepPairPow],[],1)],...
-        {'Superficial','Middle','Deep'})
+        'xlabel',{'Superficial','Middle','Deep'},'bw',0.025,'edgecolor','none');
 ylim([-0.1 1]); box off; 
 
 
-% Show gamma and alpha
-figure;boxplot([[superAllCorr(:,[2 4]); superMidPairPow(:,[2 4]); superDeepPairPow(:,[2 4])] ...
+%% Show gamma and alpha
+figure;violin([[superAllCorr(:,[2 4]); superMidPairPow(:,[2 4]); superDeepPairPow(:,[2 4])] ...
         [midAllCorr(:,[2 4]); superMidPairPow(:,[2 4]); midDeepPairPow(:,[2 4])]...
         [deepAllCorr(:,[2 4]) ; superDeepPairPow(:,[2 4]); midDeepPairPow(:,[2 4])]],...
-        {'S-Alpha','S-Gamma','M-Alpha','M-Gamma','D-Alpha','D-Gamma'});
+        'xlabel', {'S-Alpha','S-Gamma','M-Alpha','M-Gamma','D-Alpha','D-Gamma'},'bw',0.025,'edgecolor','none');
 ylim([-0.1 1]); box off; 
 %% 
 clear corrSuperMid corrMidDeep corrSuperDeep laminarCorr
@@ -420,10 +420,22 @@ allVals = [[superAllCorr; superMidPairPow; superDeepPairPow]; ...
         [midAllCorr; superMidPairPow; midDeepPairPow];...
         [deepAllCorr ; superDeepPairPow; midDeepPairPow]];
 
-figure;boxplot([allVals(repmat(ssLoc,[9 1]),4) [NaN(27,1); allVals(repmat(mmLoc,[9 1]),4)] ...
-    [NaN(54,1); allVals(repmat(smLoc,[9 1]),4)]],{'S1-S1','Motor-Motor','S1-Motor'});
+figure;violin([allVals(repmat(ssLoc,[9 1]),4) [NaN(27,1); allVals(repmat(mmLoc,[9 1]),4)] ...
+    [NaN(54,1); allVals(repmat(smLoc,[9 1]),4)]],{'S1-S1','Motor-Motor','S1-Motor'},'bw',0.035,'edgecolor','none');
 box off; ylim([-0.1 1]);
 title('Interaction - frequency x site pair identity');
+
+%%
+figure; 
+subplot(121);
+violin([distValsNew(ssLoc) [NaN(3,1);distValsNew(mmLoc)] ...
+    [NaN(6,1); distValsNew(smLoc)]],{'S1-S1','Motor-Motor','S1-Motor'},'edgecolor','none');
+box off;
+
+subplot(122);
+violin([connValsNew(ssLoc) [NaN(3,1);connValsNew(mmLoc)] ...
+    [NaN(6,1); connValsNew(smLoc)]],{'S1-S1','Motor-Motor','S1-Motor'},'edgecolor','none');
+box off; 
 
 %%
 for iVal = 1:3
@@ -448,6 +460,7 @@ for iVal = 1:3
     end
     sgtitle(figTitle);
 end
+
 %%
 figure; idx = 1;
 for iLayer = 1: 3
