@@ -426,6 +426,32 @@ box off; ylim([-0.1 1]);
 title('Interaction - frequency x site pair identity');
 
 %%
+for iVal = 1:3
+    figure;
+    switch iVal
+         case 1
+            val = ssLoc;
+            figTitle ='Somatosensory-Somatosensory';
+        case 2
+            val = mmLoc;
+            figTitle ='Motor-Motor';
+        case 3
+            val = smLoc;
+            figTitle ='Somatosensory-Motor';
+    end
+    for iBand = 1:5
+        subplot(2,3,iBand);
+        boxplot([[superAllCorr(val,iBand) superMidPairPow(val,iBand) superDeepPairPow(val,iBand)] ...
+            [midAllCorr(val,iBand)  midDeepPairPow(val,iBand)]...
+            [deepAllCorr(val,iBand) ]],...
+            {'Super-Super','Super-Middle','Super-Deep','Middle-Middle','Mid-Deep','Deep-Deep'});
+        title(bandLabels{iBand}); ylim([-0.2 1]); box off;
+    end
+    sgtitle(figTitle);
+    
+end
+
+%%
 figure; 
 subplot(121);
 violin([distValsNew(ssLoc) [NaN(3,1);distValsNew(mmLoc)] ...
