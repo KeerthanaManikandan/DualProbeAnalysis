@@ -1,52 +1,104 @@
-function [modIdx,pj] = getPhaseAmpCoupling(phaseVal,amplitudeVal,plotVar)
+function modIdx = getPhaseAmpCoupling(phaseA,amplitudeA,phaseB,amplitudeB,winStart,winEnd,winSize,...
+    chAIdx, chBIdx)
 % Calculate the phase amplitude coupling.
 % Based on Tort et al (2010), Journal of Neurophysiology 
 % phaseVal: Low frequency phase
 % amplitudeVal: High frequency amplitude
 % Keerthana Manikandan
 % October 13,2025
+% Updated on Jan 9, 2026 
 
-if nargin<3
-    plotVar = 0; 
-end 
+% Initialize variables
+nLow     = size(phaseA,1);     % # Low frequency windows 
+nHigh    = size(amplitudeA,1); % # High frequency windows
+nWin     = numel(winStart);    % Windows to iterate
+nChan    = size(chAIdx,1);     % Channel combinations
 
-% Divide phase into bins
-[~,edges,bin] = histcounts(rad2deg(phaseVal),'BinEdges',-180:20:180);
+nBins    = 18;
+binEdges = -180:20:180;
+logN     = single(log(nBins)); 
+groupIdx = single(repelem(1:nChan,winSize)');
+phaseA   = rad2deg(phaseA);
+pj       = zeros(nBins,nChan); %#ok<PREALL>
 
-% Get the mean powers for each bin
-n = size(edges,2)-1;
+modIdx   = NaN(nWin,nHigh,nLow,nChan,'single');
 
-% Reshape 'bin' and 'amplitude' into column vectors
-binCol       = bin(:);
-amplitudeCol = amplitudeVal(:);
+% Setup progress tracking
+D = parallel.pool.DataQueue;
+progress = 0;
+startTime = tic;
 
-% Create a grouping index for each column
-numColumns = size(bin, 2);
-numRows = size(bin, 1);
+afterEach(D, @updateProgress);
 
-if numColumns~=1 % To account for single channels
-    groupIdx = repelem(1:numColumns, numRows)'; % repeats each column index for all its rows
-    pj = accumarray([binCol, groupIdx], amplitudeCol, [], @mean);
-else
-    pj = accumarray(binCol,amplitudeCol,[],@mean);
+    function updateProgress(~)
+        progress = progress + 1;
+        elapsed  = toc(startTime);
+        pct = 100 * progress / nWin;
+        avgTime = elapsed / progress;
+        remaining = (nWin - progress) * avgTime;
+        
+        % Clear previous line and print update
+        % fprintf('\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b');
+        fprintf('Progress: %d/%d (%.1f%%) | Elapsed: %.1fm | Remaining: %.1fm | Avg: %.1fs/win', ...
+            progress, nWin, pct, elapsed/60, remaining/60, avgTime);
+    end
+
+parfor iWin = 1:nWin 
+
+    amplitudeATemp = squeeze(amplitudeA(:,winStart(iWin):winEnd(iWin),chAIdx)); %#ok<PFBNS>
+    phaseATemp     = squeeze(phaseA(:,winStart(iWin):winEnd(iWin),chAIdx)); %#ok<PFBNS>
+
+    amplitudeBTemp = squeeze(amplitudeB(:,winStart(iWin):winEnd(iWin),chBIdx)); %#ok<PFBNS>
+    phaseBTemp     = squeeze(phaseB(:,winStart(iWin):winEnd(iWin),chBIdx)); %#ok<PFBNS>
+
+    [~,~,binA]     = histcounts(phaseATemp,'BinEdges',binEdges); binA = single(binA);
+    [~,~,binB]     = histcounts(phaseBTemp,'BinEdges',binEdges); binB = single(binB); 
+    
+    modIdxTemp    = NaN(nHigh, nLow, nChan, 'single');
+
+    for iHigh = 1:nHigh
+        for iLow = 1:nLow           
+
+            ampAHigh = squeeze(amplitudeATemp(iHigh,:,:));
+            binALow  = squeeze(binA(iLow,:,:));
+
+            ampBHigh = squeeze(amplitudeBTemp(iHigh,:,:));
+            binBLow   = squeeze(binB(iLow,:,:));
+
+            % Reshape 'bin' and 'amplitude' into column vectors
+            binCol       = binALow(:);
+            amplitudeCol = ampAHigh(:);
+
+            % % Divide phase into bins
+            % [~,edges,bin] = histcounts(rad2deg(phaseVal),'BinEdges',-180:20:180);
+            %
+            % % Get the mean powers for each bin
+            % n = size(edges,2)-1;
+            %
+            % % Reshape 'bin' and 'amplitude' into column vectors
+            % binCol       = bin(:);
+            % amplitudeCol = amplitudeVal(:);
+            %
+            % % Create a grouping index for each column
+            % numColumns = size(bin, 2);
+            % numRows = size(bin, 1);
+
+            pj = accumarray([binCol, groupIdx], amplitudeCol, [], @mean);
+
+            % pj = mean(amplitude) at phase j
+
+            pj = pj./sum(pj,1,'omitnan'); % normalized pac = pj/sum(pj for j= 1:n) % The sum should be equal to 1
+
+            % Calculate modulation index
+            modIdxTemp(iHigh, iLow, :)  = (logN-(-sum(pj.*log(pj))))./logN;
+        end
+    end
+    modIdx(iWin,:,:,:) = modIdxTemp;
+    send(D, iWin);
 end
 
-% pj = mean(amplitude) at phase j
-
-pj = pj./sum(pj,1,'omitnan'); % normalized pac = pj/sum(pj for j= 1:n) % The sum should be equal to 1
-
-% Calculate modulation index
-modIdx = (log(n)-(-sum(pj.*log(pj))))./log(n); 
-
-if plotVar
-    % Plot the phase and amplitude in a polar plot
-    figure; subplot(121); polarplot(median(phaseVal,2,'omitnan'),median(amplitudeVal,2,'omitnan'),'.');
-
-    % Plot the distribution of means as a function of phase angle
-    subplot(122); b =bar(edges(1:end-1),median(pj,2,'omitnan'),'histc');ylim([0 0.1]);
-    b.FaceColor = [0 0.4470 0.7410];
-    xlim([-180 180]); xlabel('Phase'); ylabel('Mean PAC (normalized)');box off;
-end
+totalTime = toc;
+fprintf('Total time: %.1f minutes (%.2f hours)\n', totalTime/60, totalTime/3600); 
 
 end
 
