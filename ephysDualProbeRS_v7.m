@@ -337,8 +337,6 @@ for iFig = 1:3
     end
 end
 
-
-
 %% Perform Phase amplitude coupling
 % Get the PAC comodulogram
 % Set the amplitude range
@@ -365,9 +363,10 @@ for iDate = 2:5%size(allDates,1)
     datFileNum = datFileNumAll{iDate,1};
 
     for iRun = 1:length(datFileNum)
-        % if iDate==2 && iRun == 1; continue; end
+
+        if iDate==2 && iRun == 1; continue; end
         fileNum = datFileNum(iRun);
-    clear modA2B modB2A modA2A modB2B
+    clear modIdxA2A modIdxB2B modIdxAamp2Bphase modIdxAamp2Bphase
         chA = estChInCortexA{iDate}(iRun,:);
         chB = estChInCortexB{iDate}(iRun,:);
 
@@ -375,57 +374,15 @@ for iDate = 2:5%size(allDates,1)
 
         if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramVals_10sec_' num2str(fileNum) '.mat'],'file') || 1%
             clc; disp(['Processing data for ' monkeyName ': Date: ' allDates(iDate,:) ' ; File: ' num2str(fileNum)]);
-%%
+
             [amplitudeA, amplitudeB, phaseA, phaseB] = calculatePhaseAmpSignals(monkeyName,expDate,hemisphere,fileNum,...
                 allProbeData{fileNum,iDate}.probe1Ch,allProbeData{fileNum,iDate}.probe2Ch,badElecA{fileNum,iDate},...
                 badElecB{fileNum,iDate},allBadTimes{fileNum,iDate},estChInCortexA{iDate}(iRun,:),...
                 estChInCortexB{iDate}(iRun,:),gammaRange,lowFreqRange);
-%%
+
             % Get all channel combinations
-            combAllCh    = table2array(combinations(1:size(amplitudeA,3),1:size(amplitudeB,3)));
-            combAllChA2A = table2array(combinations(1:size(amplitudeA,3),1:size(amplitudeA,3)));
-            combAllChB2B = table2array(combinations(1:size(amplitudeB,3),1:size(amplitudeB,3)));
-
-            % super2Super = ismember(combAllCh,table2array(combinations(1:chSplit,1:chSplit)),'rows'); 
-            % super2Mid   = ismember(combAllCh,table2array(combinations(1:chSplit,chSplit+1:chSplit*2)),'rows');
-            % mid2Mid     = ismember(combAllCh,table2array(combinations(chSplit+1:chSplit*2,chSplit+1:chSplit*2)),'rows');
-            % mid2Super   = ismember(combAllCh,table2array(combinations(chSplit+1:chSplit*2,1:chSplit)),'rows');
-            % 
-            % % Deep B
-            % super2DeepB  = ismember(combAllCh,table2array(combinations(1:chSplit,chSplit*2+1:size(amplitudeB,3))),'rows');
-            % mid2DeepB    = ismember(combAllCh,table2array(combinations(chSplit+1:chSplit*2, chSplit*2+1:size(amplitudeB,3))),'rows');
-            % 
-            % % Deep A
-            % super2DeepA  = ismember(combAllCh,table2array(combinations(1:chSplit,chSplit*2+1:size(amplitudeA,3))),'rows');
-            % mid2DeepA    = ismember(combAllCh,table2array(combinations(chSplit+1:chSplit*2, chSplit*2+1:size(amplitudeA,3))),'rows'); 
-            % 
-            % % A--B
-            % deepA2DeepB   = ismember(combAllCh,table2array(combinations(chSplit*2+1:size(amplitudeA,3),chSplit*2+1:size(amplitudeB,3))),'rows');
-            % 
-            % % B--A
-            % deepB2DeepA   = ismember(combAllCh,table2array(combinations(chSplit*2+1:size(amplitudeB,3),chSplit*2+1:size(amplitudeA,3))),'rows');
-            % 
-            % % A--A
-            % deepA2DeepA   = ismember(combAllCh,table2array(combinations(chSplit*2+1:size(amplitudeA,3),chSplit*2+1:size(amplitudeA,3))),'rows');
-            % 
-            % % B--B
-            % deepB2DeepB   = ismember(combAllCh,table2array(combinations(chSplit*2+1:size(amplitudeB,3),chSplit*2+1:size(amplitudeB,3))),'rows');
-
-            % Repeat the amplitude and phase based on the combinations
-            % amplitudeAT = zeros([size(amplitudeA,1) size(amplitudeA,2) size(combAllCh,1)],'single');
-            % phaseAT     = zeros([size(phaseA,1) size(phaseA,2) size(combAllCh,1)],'single');
-            % 
-            % amplitudeBT = zeros([size(amplitudeB,1) size(amplitudeB,2) size(combAllCh,1)],'single');
-            % phaseBT     = zeros([size(phaseB,1) size(phaseB,2) size(combAllCh,1)],'single');
-
-            % amplitudeAT = amplitudeA(:,:,combAllCh(:,1)); 
-            % phaseAT     = phaseA(:,:,combAllCh(:,1)); 
-            % 
-            % amplitudeBT = amplitudeB(:,:,combAllCh(:,2));
-            % phaseBT     = phaseB(:,:,combAllCh(:,2)); 
-
-            nChan    = size(combAllCh,1);%min(size(amplitudeA,3),size(amplitudeB,3));
-            dataLen  = size(amplitudeA,2);
+            combAllCh = table2array(combinations(1:size(amplitudeA,3),1:size(amplitudeB,3)));
+            dataLen   = size(amplitudeA,2);
 
             % Calculate windows
             winStart = 1:stepSize:(dataLen-winSize);
@@ -433,33 +390,85 @@ for iDate = 2:5%size(allDates,1)
             nWin     = numel(winStart);
             if nWin>60; nWin = 60; winStart = winStart(1:nWin); winEnd = winEnd(1:nWin); end 
 
-            modA2B = getPhaseAmpCoupling(phaseB,amplitudeA,winStart,winEnd,winSize,combAllCh(:,1),combAllCh(:,2));
-            save(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramVals_10sec_' num2str(fileNum) '.mat'],...
-                'modA2B');
-            modB2A = getPhaseAmpCoupling(phaseA,amplitudeB,winStart,winEnd,winSize,combAllCh(:,2),combAllCh(:,1));
-            save(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramVals_10sec_' num2str(fileNum) '.mat'],...
-                'modB2A','-append');
-            
-            modA2A = getPhaseAmpCoupling(phaseA,amplitudeA,winStart,winEnd,winSize,combAllChA2A(:,1),combAllChA2A(:,2));
-            save(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramVals_10sec_' num2str(fileNum) '.mat'],...
-                'modA2A','-append');
-            modB2B = getPhaseAmpCoupling(phaseB,amplitudeB,winStart,winEnd,winSize,combAllChB2B(:,1),combAllChB2B(:,2));
-            save(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramVals_10sec_' num2str(fileNum) '.mat'],...
-                'modB2B','-append');
-            % save(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramVals_10sec_' num2str(fileNum) '.mat'],...
-            %     'modA2B','modB2A','modA2A','modB2B');
+            [modIdxA2A,modIdxB2B,modIdxAamp2Bphase,modIdxAphase2Bamp] = getPhaseAmpCoupling(phaseA,...
+    amplitudeA,phaseB,amplitudeB,winStart,winEnd,winSize,combAllCh(:,1), combAllCh(:,2));
 
-            % save(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramVals_10sec_' num2str(fileNum) '.mat'],...
-            %     'modA2B','modB2A','modA2A','modB2B','modASuper2BMid','modBSuper2AMid','modASuper2AMid','modBSuper2BMid','modAMid2BDeep','modBMid2ADeep',...
-            %     'modAMid2ADeep','modBMid2BDeep','modASuper2BDeep','modBSuper2ADeep','modASuper2ADeep','modBSuper2BDeep','modAMid2BSuper','modBMid2ASuper',...
-            %     'modAMid2ASuper','modBMid2BSuper','modADeep2BMid','modBDeep2AMid','modADeep2AMid','modBDeep2BMid','modADeep2BSuper','modBDeep2ASuper',...
-            %     'modADeep2ASuper','modBDeep2BSuper');
 
-            % clear lowFreqAconst lowFreqBconst highFreqAconst highFreqBconst
+            save(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramVals_10sec_' num2str(fileNum) '.mat'],...
+                'modIdxA2A','modIdxB2B','modIdxAamp2Bphase','modIdxAphase2Bamp','combAllCh');
+
         end
 
         allPACVars{iRun,iDate} = matfile(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramVals_10sec_' num2str(fileNum) '.mat']);
     end
+end
+
+%% Synthesizing the results
+[phaseVal, ampVal] = meshgrid(lowFreqRange,gammaRange);
+allCombVec = [phaseVal(:) ampVal(:)];
+thetaHighGammaIdx = ismember(allCombVec,...
+    single(table2array(combinations(lowFreqRange(lowFreqRange<=8),gammaRange(gammaRange>=70)))),'rows');
+
+thetaLowGammaIdx = ismember(allCombVec,...
+    single(table2array(combinations(lowFreqRange(lowFreqRange<8),gammaRange(gammaRange>30 & gammaRange<=50)))),'rows');
+
+for iDate = 2:size(allDates,1)
+    clear expDate datFileNum saveFolder
+    expDate    = allDates(iDate,:);
+    datFileNum = datFileNumAll{iDate,1};
+
+    for iRun = 1:length(datFileNum)
+        chComb = allPACVars{iRun,iDate}.combAllCh;
+        maxChA = max(chComb(:,1));
+        maxChB = max(chComb(:,2));
+
+        avgMIBetween(iRun,iDate,:) = reshape(squeeze(median(cat(3,squeeze(median(allPACVars{iRun,iDate}.modIdxAamp2Bphase,[1 4],'omitnan')),...
+            squeeze(median(allPACVars{iRun,iDate}.modIdxAphase2Bamp,[1 4],'omitnan'))),3,'omitnan')),[nHigh*nLow 1]);
+
+        thetaLowGammaPairs(iRun,iDate) = median(avgMI(iRun,iDate,thetaLowGammaIdx),'omitnan');
+        thetaHighGammaPairs(iRun,iDate) = median(avgMI(iRun,iDate,thetaHighGammaIdx),'omitnan');
+
+        % avgAllPairs = reshape(squeeze(median(cat(4,squeeze(median(allPACVars{iRun,iDate}.modIdxAamp2Bphase,1,'omitnan')),...
+        %    squeeze(median(allPACVars{iRun,iDate}.modIdxAamp2Bphase,1,'omitnan'))),4,'omitnan')),[nHigh*nLow size(chComb,1)]);
+
+        % amplitude of the electrode is the reference
+        superA = ismember(chComb,table2array(combinations(1:chSplit,1:maxChB)),'rows');
+        superB = ismember(chComb,table2array(combinations(1:maxChA,1:chSplit)),'rows');
+
+        midA  = ismember(chComb,table2array(combinations(chSplit+1:2*chSplit,1:maxChB)),'rows');
+        midB  = ismember(chComb,table2array(combinations(1:maxChA,chSplit+1:2*chSplit)),'rows');
+
+        deepA = ismember(chComb,table2array(combinations(2*chSplit+1:maxChA,1:maxChB)),'rows');
+        deepB = ismember(chComb,table2array(combinations(1:maxChA,2*chSplit+1:maxChB)),'rows');
+
+        pacVals(iRun,iDate).aAmpBPhase = allPACVars{iRun,iDate}.modIdxAamp2Bphase;
+        pacVals(iRun,iDate).aPhaseBAmp = allPACVars{iRun,iDate}.modIdxAphase2Bamp;
+
+        pacVals(iRun,iDate).laminarAmpRef(1,:) = reshape(median(cat(3,squeeze(median(pacVals(iRun,iDate).aAmpBPhase(:,:,:,superA),[1 4],'omitnan')),...
+            squeeze(median(pacVals(iRun,iDate).aPhaseBAmp(:,:,:,superB),[1 4],'omitnan'))),3,'omitnan'),[nHigh*nLow 1]);
+
+        pacVals(iRun,iDate).laminarAmpRef(2,:) = reshape(median(cat(3,squeeze(median(pacVals(iRun,iDate).aAmpBPhase(:,:,:,midA),[1 4],'omitnan')),...
+            squeeze(median(pacVals(iRun,iDate).aPhaseBAmp(:,:,:,midB),[1 4],'omitnan'))),3,'omitnan'),[nHigh*nLow 1]);
+
+        pacVals(iRun,iDate).laminarAmpRef(3,:) = reshape(median(cat(3,squeeze(median(pacVals(iRun,iDate).aAmpBPhase(:,:,:,deepA),[1 4],'omitnan')),...
+            squeeze(median(pacVals(iRun,iDate).aPhaseBAmp(:,:,:,deepB),[1 4],'omitnan'))),3,'omitnan'),[nHigh*nLow 1]);
+
+         pacVals(iRun,iDate).laminarPhaseRef(1,:) = reshape(median(cat(3,squeeze(median(pacVals(iRun,iDate).aAmpBPhase(:,:,:,superB),[1 4],'omitnan')),...
+            squeeze(median(pacVals(iRun,iDate).aPhaseBAmp(:,:,:,superA),[1 4],'omitnan'))),3,'omitnan'),[nHigh*nLow 1]);
+
+        pacVals(iRun,iDate).laminarPhaseRef(2,:) = reshape(median(cat(3,squeeze(median(pacVals(iRun,iDate).aAmpBPhase(:,:,:,midB),[1 4],'omitnan')),...
+            squeeze(median(pacVals(iRun,iDate).aPhaseBAmp(:,:,:,midA),[1 4],'omitnan'))),3,'omitnan'),[nHigh*nLow 1]);
+
+        pacVals(iRun,iDate).laminarPhaseRef(3,:) = reshape(median(cat(3,squeeze(median(pacVals(iRun,iDate).aAmpBPhase(:,:,:,deepB),[1 4],'omitnan')),...
+            squeeze(median(pacVals(iRun,iDate).aPhaseBAmp(:,:,:,deepA),[1 4],'omitnan'))),3,'omitnan'),[nHigh*nLow 1]);
+
+        pacVals(iRun,iDate).thetaLowGammaAmp    = median(pacVals(iRun,iDate).laminarAmpRef(:,thetaLowGammaIdx),2,'omitnan');
+        pacVals(iRun,iDate).thetaHighGammaAmp   = median(pacVals(iRun,iDate).laminarAmpRef(:,thetaHighGammaIdx),2,'omitnan');
+        pacVals(iRun,iDate).thetaLowGammaPhase  = median(pacVals(iRun,iDate).laminarPhaseRef(:,thetaLowGammaIdx),2,'omitnan');
+        pacVals(iRun,iDate).thetaHighGammaPhase = median(pacVals(iRun,iDate).laminarPhaseRef(:,thetaHighGammaIdx),2,'omitnan');
+
+    end
+
 end
 
 %%
