@@ -19,7 +19,6 @@ logN     = single(log(nBins));
 groupIdx = single(repelem(1:nChan,winSize)');
 phaseA   = rad2deg(phaseA);
 phaseB   = rad2deg(phaseB);
-pjA2A    = zeros(nBins,nChan); %#ok<PREALL>
 
 modIdxA2A   = NaN(nWin,nHigh,nLow,nChan,'single');
 modIdxB2B   = NaN(nWin,nHigh,nLow,nChan,'single');
@@ -27,25 +26,26 @@ modIdxB2B   = NaN(nWin,nHigh,nLow,nChan,'single');
 modIdxAamp2Bphase   = NaN(nWin,nHigh,nLow,nChan,'single');
 modIdxAphase2Bamp   = NaN(nWin,nHigh,nLow,nChan,'single');
 
-% Setup progress tracking
-D = parallel.pool.DataQueue;
-progress = 0;
-startTime = tic;
-nChars    = 1;
-afterEach(D, @updateProgress);
-
-    function updateProgress(~)
-        progress = progress + 1;
-        elapsed  = toc(startTime);
-        pct = 100 * progress / nWin;
-        avgTime = elapsed / progress;
-        remaining = (nWin - progress) * avgTime;
-        
-        % Clear previous line and print update
-        fprintf(repmat('\b', 1, nChars));
-        nChars = fprintf('\rProgress: %d/%d (%.1f%%) | Elapsed: %.1fm | Remaining: %.1fm | Avg: %.1fs/win', ...
-            progress, nWin, pct, elapsed/60, remaining/60, avgTime);
-    end
+% Setup progress tracking - Uncomment the code below if you want to track
+% code progress within parfor loop
+% D = parallel.pool.DataQueue;
+% progress = 0;
+% startTime = tic;
+% nChars    = 1;
+% afterEach(D, @updateProgress);
+% 
+%     function updateProgress(~)
+%         progress = progress + 1;
+%         elapsed  = toc(startTime);
+%         pct = 100 * progress / nWin;
+%         avgTime = elapsed / progress;
+%         remaining = (nWin - progress) * avgTime;
+% 
+%         % Clear previous line and print update
+%         fprintf(repmat('\b', 1, nChars));
+%         nChars = fprintf('\rProgress: %d/%d (%.1f%%) | Elapsed: %.1fm | Remaining: %.1fm | Avg: %.1fs/win', ...
+%             progress, nWin, pct, elapsed/60, remaining/60, avgTime);
+%     end
 
 parfor iWin = 1:nWin 
 
@@ -62,9 +62,8 @@ parfor iWin = 1:nWin
     modIdxTempB2B    = NaN(nHigh, nLow, nChan, 'single');
 
     modIdxTempAamp2Bphase = NaN(nHigh, nLow, nChan, 'single');
-    modIdxTempAphase2Bamp = NaN(nHigh, nLow, nChan, 'single');
-
-    
+    modIdxTempAphase2Bamp = NaN(nHigh, nLow, nChan, 'single');  
+ 
     for iHigh = 1:nHigh
         % Get the amplitude for iHigh 
         ampAHigh      = squeeze(amplitudeATemp(iHigh,:,:));
@@ -77,7 +76,12 @@ parfor iWin = 1:nWin
             binALow = squeeze(binA(iLow,:,:));
             binBLow = squeeze(binB(iLow,:,:));
             binACol = binALow(:);         
-            binBCol = binBLow(:);           
+            binBCol = binBLow(:);
+
+            % pjA2A    = zeros(nBins,nChan); 
+            % pjB2B    = zeros(nBins,nChan); 
+            % pjA2B    = zeros(nBins,nChan); 
+            % pjB2A    = zeros(nBins,nChan); %#ok<*PREALL>
 
             % Calculate modulation index between phase and amplitude
             % A - A
@@ -102,7 +106,7 @@ parfor iWin = 1:nWin
         end
     end
 
- 
+
     % Assign the frequency pairs to specific windows
     modIdxA2A(iWin,:,:,:) = modIdxTempA2A;
     modIdxB2B(iWin,:,:,:) = modIdxTempB2B;
@@ -110,11 +114,11 @@ parfor iWin = 1:nWin
     modIdxAamp2Bphase(iWin,:,:,:) = modIdxTempAamp2Bphase;
     modIdxAphase2Bamp(iWin,:,:,:) = modIdxTempAphase2Bamp;
 
-    send(D, iWin);
+    % send(D, iWin); % Uncomment this line if you are tracking progress 
 end
-
-totalTime = toc;
-fprintf('Total time: %.1f minutes (%.2f hours)\n', totalTime/60, totalTime/3600); 
+% Uncomment the following if you are tracking progress
+% totalTime = toc;
+% fprintf('Total time: %.1f minutes (%.2f hours)\n', totalTime/60, totalTime/3600); 
 
 end
 

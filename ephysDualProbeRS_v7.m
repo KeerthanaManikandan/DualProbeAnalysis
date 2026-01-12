@@ -102,8 +102,6 @@ for iDate =1:size(allDates,1)
 
 end
 
-
-
 disp(['Obtained/retrieved distance between probes, connectivity values, heart rate, anesthesia levels for ' monkeyName]);
 
 % Get all dual probe data
@@ -357,7 +355,7 @@ stepSize = 10e3;
 chSplit = 6;
 
 % Get the phase amplitude coupling for the recordings...
-for iDate = 2:5%size(allDates,1)
+for iDate = 6:7%size(allDates,1)
     clear expDate datFileNum saveFolder
     expDate    = allDates(iDate,:);
     datFileNum = datFileNumAll{iDate,1};
@@ -374,7 +372,7 @@ for iDate = 2:5%size(allDates,1)
 
         if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramVals_10sec_' num2str(fileNum) '.mat'],'file') || 1%
             clc; disp(['Processing data for ' monkeyName ': Date: ' allDates(iDate,:) ' ; File: ' num2str(fileNum)]);
-
+            tic;
 
             [amplitudeA, amplitudeB, phaseA, phaseB] = calculatePhaseAmpSignals(monkeyName,expDate,hemisphere,fileNum,...
                 allProbeData{fileNum,iDate}.probe1Ch,allProbeData{fileNum,iDate}.probe2Ch,badElecA{fileNum,iDate},...
@@ -397,16 +395,133 @@ for iDate = 2:5%size(allDates,1)
 
             save(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramVals_10sec_' num2str(fileNum) '.mat'],...
                 'modIdxA2A','modIdxB2B','modIdxAamp2Bphase','modIdxAphase2Bamp','combAllCh');
-
+        toc;
         end
 
         allPACVars{iRun,iDate} = matfile(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramVals_10sec_' num2str(fileNum) '.mat']);
     end
 end
 
+%% Getting the surrogate/shuffled distribution
+% winSize = [10 20 30 40 50 100].*1e3;
+nHigh = size(gammaRange,2);
+nLow  = size(lowFreqRange,2);
+
+winSize  = 10e3;
+stepSize = 10e3;
+
+% shiftLen = [1 5 10 20 50 100].*1e3;
+% nShift   = length(shiftLen);
+
+for iDate = 2:5%size(allDates,1)
+    expDate    = allDates(iDate,:);
+    datFileNum = datFileNumAll{iDate,1};
+
+    for iRun = 1:length(datFileNum)
+        if iDate == 3 && iRun>8; continue; end 
+
+        fileNum = datFileNum(iRun);
+        chA = estChInCortexA{iDate}(iRun,:);
+        chB = estChInCortexB{iDate}(iRun,:);
+        if chA(1)== 0 || chB(1)==0; continue; end
+        if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate...
+                '\Electrophysiology\modulogramCtrl10sec_' num2str(fileNum) '.mat'],'file')
+            clc; disp(['Getting shuffled/surrogate data for ' monkeyName ': Date: ' allDates(iDate,:) ' ; File: ' num2str(fileNum)]);
+  
+
+            [amplitudeA, amplitudeB, phaseA, phaseB] = calculatePhaseAmpSignals(monkeyName,expDate,hemisphere,fileNum,...
+                allProbeData{fileNum,iDate}.probe1Ch,allProbeData{fileNum,iDate}.probe2Ch,badElecA{fileNum,iDate},...
+                badElecB{fileNum,iDate},allBadTimes{fileNum,iDate},estChInCortexA{iDate}(iRun,:),...
+                estChInCortexB{iDate}(iRun,:),gammaRange,lowFreqRange);
+
+            dataLen = size(amplitudeA,2);
+            nChan      = min(size(amplitudeA,3),size(amplitudeB,3));
+
+            amplitudeA = amplitudeA(:,:,1:nChan);
+            amplitudeB = amplitudeB(:,:,1:nChan);
+            phaseA     = phaseA(:,:,1:nChan);
+            phaseB     = phaseB(:,:,1:nChan);
+
+            winStart = 1:stepSize:(dataLen-winSize);
+            winEnd   = winStart+stepSize-1;
+            nWin     = numel(winStart);
+
+            modIdxAllA2BShuffleT = NaN(nWin,nHigh,nLow,nChan,'single'); % size is shift length x # time windows x high freq x low freq x # channels
+            modIdxAllB2AShuffleT = NaN(nWin,nHigh,nLow,nChan,'single');
+            modIdxAllA2AShuffleT = NaN(nWin,nHigh,nLow,nChan,'single');
+            modIdxAllB2BShuffleT = NaN(nWin,nHigh,nLow,nChan,'single');
+
+            % Create artificial surrogates for the data
+            % Shuffle every sample of the phase time course
+            clear phaseAShuff phaseBShuff
+            phaseAShuff = zeros([size(phaseA)],'single');
+            phaseBShuff = zeros([size(phaseB)],'single');
+           
+            rng('shuffle');
+            comb1 = randperm(dataLen);
+            phaseAShuff = phaseA(:,comb1,:);
+            phaseBShuff = phaseB(:,comb1,:); 
+
+            highFreqAconst = parallel.pool.Constant(amplitudeA);
+            highFreqBconst = parallel.pool.Constant(amplitudeB);
+            lowFreqAconst  = parallel.pool.Constant(phaseAShuff);
+            lowFreqBconst  = parallel.pool.Constant(phaseBShuff);
+
+            tic;
+            parfor iHigh = 1:nHigh
+                % Local copies
+                lowA = lowFreqAconst.Value;
+                lowB = lowFreqBconst.Value;
+                highA = highFreqAconst.Value;
+                highB = highFreqBconst.Value;
+
+                modA2BT = NaN(nWin,nLow,nChan,'single');
+                modB2AT = NaN(nWin,nLow,nChan,'single');
+                modA2AT = NaN(nWin,nLow,nChan,'single');
+                modB2BT = NaN(nWin,nLow,nChan,'single');
+
+                for iWin = 1:nWin
+                    idx = winStart(iWin):winEnd(iWin);
+                    for iLow = 1:nLow
+                        [modA2BT(iWin,iLow,:),~] = getPhaseAmpCoupling(squeeze(lowB(iLow,idx,1:nChan)),squeeze(highA(iHigh,idx,1:nChan)));
+                        [modB2AT(iWin,iLow,:),~] = getPhaseAmpCoupling(squeeze(lowA(iLow,idx,1:nChan)),squeeze(highB(iHigh,idx,1:nChan)));
+                        [modA2AT(iWin,iLow,:),~] = getPhaseAmpCoupling(squeeze(lowA(iLow,idx,1:nChan)),squeeze(highA(iHigh,idx,1:nChan)));
+                        [modB2BT(iWin,iLow,:),~] = getPhaseAmpCoupling(squeeze(lowB(iLow,idx,1:nChan)),squeeze(highB(iHigh,idx,1:nChan)));
+                    end
+                end
+
+                modIdxAllA2BShuffleT(:,iHigh,:,:) = modA2BT;
+                modIdxAllB2AShuffleT(:,iHigh,:,:) = modB2AT;
+                modIdxAllA2AShuffleT(:,iHigh,:,:) = modA2AT;
+                modIdxAllB2BShuffleT(:,iHigh,:,:) = modB2BT;
+
+            end
+            toc;
+
+            save(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramCtrl10sec_' num2str(fileNum) '.mat'],...
+                'modIdxAllA2BShuffleT','modIdxAllB2AShuffleT','modIdxAllA2AShuffleT','modIdxAllB2BShuffleT');
+        end
+
+            allCtrlVals{iRun,iDate} = matfile(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramCtrl10sec_' num2str(fileNum) '.mat']);
+    end
+end
+
+% Organizing the control/surrogate distribution
+zeroVals = cell2mat(cellfun(@(x) isempty(x),allCtrlVals,'un',0));
+allCtrlValsT = allCtrlVals;
+allCtrlValsT(zeroVals) = [];
+
+for iL = 1:size(allCtrlValsT,2)
+    a2bShuffle(iL,:) = reshape(squeeze(median(allCtrlValsT{iL}.modIdxAllA2BShuffleT,[1 4],'omitnan')),[nLow*nHigh,1]);
+    b2aShuffle(iL,:) = reshape(squeeze(median(allCtrlValsT{iL}.modIdxAllB2AShuffleT,[1,4],'omitnan')),[nLow*nHigh,1]); 
+    a2aShuffle(iL,:) = reshape(squeeze(median(allCtrlValsT{iL}.modIdxAllA2AShuffleT,[1,4],'omitnan')),[nLow*nHigh,1]);
+    b2bShuffle(iL,:) = reshape(squeeze(median(allCtrlValsT{iL}.modIdxAllB2BShuffleT,[1 4],'omitnan')),[nLow*nHigh,1]); 
+end
+
 %% Synthesizing the results
 [phaseVal, ampVal] = meshgrid(lowFreqRange,gammaRange);
 allCombVec = [phaseVal(:) ampVal(:)];
+
 thetaHighGammaIdx = ismember(allCombVec,...
     single(table2array(combinations(lowFreqRange(lowFreqRange<=8),gammaRange(gammaRange>=70)))),'rows');
 
@@ -419,6 +534,7 @@ for iDate = 2:size(allDates,1)
     datFileNum = datFileNumAll{iDate,1};
 
     for iRun = 1:length(datFileNum)
+        if isempty(allPACVars{iRun,iDate}); continue; end 
         chComb = allPACVars{iRun,iDate}.combAllCh;
         maxChA = max(chComb(:,1));
         maxChB = max(chComb(:,2));
@@ -639,122 +755,6 @@ end
 % Plot for compartments....
 
 
-
-%% Getting the surrogate/shuffled distribution
-% winSize = [10 20 30 40 50 100].*1e3;
-nHigh = size(gammaRange,2);
-nLow  = size(lowFreqRange,2);
-
-winSize  = 10e3;
-stepSize = 10e3;
-
-% shiftLen = [1 5 10 20 50 100].*1e3;
-% nShift   = length(shiftLen);
-
-for iDate = 2:5%size(allDates,1)
-    expDate    = allDates(iDate,:);
-    datFileNum = datFileNumAll{iDate,1};
-
-    for iRun = 1:length(datFileNum)
-        if iDate == 3 && iRun>8; continue; end 
-
-        fileNum = datFileNum(iRun);
-        chA = estChInCortexA{iDate}(iRun,:);
-        chB = estChInCortexB{iDate}(iRun,:);
-        if chA(1)== 0 || chB(1)==0; continue; end
-        if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate...
-                '\Electrophysiology\modulogramCtrl10sec_' num2str(fileNum) '.mat'],'file')
-            clc; disp(['Getting shuffled/surrogate data for ' monkeyName ': Date: ' allDates(iDate,:) ' ; File: ' num2str(fileNum)]);
-  
-
-            [amplitudeA, amplitudeB, phaseA, phaseB] = calculatePhaseAmpSignals(monkeyName,expDate,hemisphere,fileNum,...
-                allProbeData{fileNum,iDate}.probe1Ch,allProbeData{fileNum,iDate}.probe2Ch,badElecA{fileNum,iDate},...
-                badElecB{fileNum,iDate},allBadTimes{fileNum,iDate},estChInCortexA{iDate}(iRun,:),...
-                estChInCortexB{iDate}(iRun,:),gammaRange,lowFreqRange);
-
-            dataLen = size(amplitudeA,2);
-            nChan      = min(size(amplitudeA,3),size(amplitudeB,3));
-
-            amplitudeA = amplitudeA(:,:,1:nChan);
-            amplitudeB = amplitudeB(:,:,1:nChan);
-            phaseA     = phaseA(:,:,1:nChan);
-            phaseB     = phaseB(:,:,1:nChan);
-
-            winStart = 1:stepSize:(dataLen-winSize);
-            winEnd   = winStart+stepSize-1;
-            nWin     = numel(winStart);
-
-            modIdxAllA2BShuffleT = NaN(nWin,nHigh,nLow,nChan,'single'); % size is shift length x # time windows x high freq x low freq x # channels
-            modIdxAllB2AShuffleT = NaN(nWin,nHigh,nLow,nChan,'single');
-            modIdxAllA2AShuffleT = NaN(nWin,nHigh,nLow,nChan,'single');
-            modIdxAllB2BShuffleT = NaN(nWin,nHigh,nLow,nChan,'single');
-
-            % Create artificial surrogates for the data
-            % Shuffle every sample of the phase time course
-            clear phaseAShuff phaseBShuff
-            phaseAShuff = zeros([size(phaseA)],'single');
-            phaseBShuff = zeros([size(phaseB)],'single');
-           
-            rng('shuffle');
-            comb1 = randperm(dataLen);
-            phaseAShuff = phaseA(:,comb1,:);
-            phaseBShuff = phaseB(:,comb1,:); 
-
-            highFreqAconst = parallel.pool.Constant(amplitudeA);
-            highFreqBconst = parallel.pool.Constant(amplitudeB);
-            lowFreqAconst  = parallel.pool.Constant(phaseAShuff);
-            lowFreqBconst  = parallel.pool.Constant(phaseBShuff);
-
-            tic;
-            parfor iHigh = 1:nHigh
-                % Local copies
-                lowA = lowFreqAconst.Value;
-                lowB = lowFreqBconst.Value;
-                highA = highFreqAconst.Value;
-                highB = highFreqBconst.Value;
-
-                modA2BT = NaN(nWin,nLow,nChan,'single');
-                modB2AT = NaN(nWin,nLow,nChan,'single');
-                modA2AT = NaN(nWin,nLow,nChan,'single');
-                modB2BT = NaN(nWin,nLow,nChan,'single');
-
-                for iWin = 1:nWin
-                    idx = winStart(iWin):winEnd(iWin);
-                    for iLow = 1:nLow
-                        [modA2BT(iWin,iLow,:),~] = getPhaseAmpCoupling(squeeze(lowB(iLow,idx,1:nChan)),squeeze(highA(iHigh,idx,1:nChan)));
-                        [modB2AT(iWin,iLow,:),~] = getPhaseAmpCoupling(squeeze(lowA(iLow,idx,1:nChan)),squeeze(highB(iHigh,idx,1:nChan)));
-                        [modA2AT(iWin,iLow,:),~] = getPhaseAmpCoupling(squeeze(lowA(iLow,idx,1:nChan)),squeeze(highA(iHigh,idx,1:nChan)));
-                        [modB2BT(iWin,iLow,:),~] = getPhaseAmpCoupling(squeeze(lowB(iLow,idx,1:nChan)),squeeze(highB(iHigh,idx,1:nChan)));
-                    end
-                end
-
-                modIdxAllA2BShuffleT(:,iHigh,:,:) = modA2BT;
-                modIdxAllB2AShuffleT(:,iHigh,:,:) = modB2AT;
-                modIdxAllA2AShuffleT(:,iHigh,:,:) = modA2AT;
-                modIdxAllB2BShuffleT(:,iHigh,:,:) = modB2BT;
-
-            end
-            toc;
-
-            save(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramCtrl10sec_' num2str(fileNum) '.mat'],...
-                'modIdxAllA2BShuffleT','modIdxAllB2AShuffleT','modIdxAllA2AShuffleT','modIdxAllB2BShuffleT');
-        end
-
-            allCtrlVals{iRun,iDate} = matfile(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramCtrl10sec_' num2str(fileNum) '.mat']);
-    end
-end
-
-%%
-zeroVals = cell2mat(cellfun(@(x) isempty(x),allCtrlVals,'un',0));
-allCtrlValsT = allCtrlVals;
-allCtrlValsT(zeroVals) = [];
-
-for iL = 1:size(allCtrlValsT,2)
-    a2bShuffle(iL,:) = reshape(squeeze(median(allCtrlValsT{iL}.modIdxAllA2BShuffleT,[1 4],'omitnan')),[nLow*nHigh,1]);
-    b2aShuffle(iL,:) = reshape(squeeze(median(allCtrlValsT{iL}.modIdxAllB2AShuffleT,[1,4],'omitnan')),[nLow*nHigh,1]); 
-    a2aShuffle(iL,:) = reshape(squeeze(median(allCtrlValsT{iL}.modIdxAllA2AShuffleT,[1,4],'omitnan')),[nLow*nHigh,1]);
-    b2bShuffle(iL,:) = reshape(squeeze(median(allCtrlValsT{iL}.modIdxAllB2BShuffleT,[1 4],'omitnan')),[nLow*nHigh,1]); 
-end
 
 %%
 allVarsT = allPACVars; 
