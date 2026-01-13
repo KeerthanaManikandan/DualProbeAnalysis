@@ -116,13 +116,14 @@ timeLabels = {'Time series','Power','Infraslow'};
 
 %% Get recording pairs based on terminations in 3b or 3a
 termination3b    = zeros(size(goodRuns));
-termination3a    = zeros(size(goodRuns));
-terminationArea1 = zeros(size(goodRuns));
-terminationArea2 = zeros(size(goodRuns));
-terminationArea4 = zeros(size(goodRuns));
+% termination3a    = zeros(size(goodRuns));
+% terminationArea1 = zeros(size(goodRuns));
+% terminationArea2 = zeros(size(goodRuns));
+% terminationArea4 = zeros(size(goodRuns));
 
 singleChRow = cellfun(@(x) isscalar(x),allVars.intraCorrBR(:,1));
-
+s1Pairs = zeros(16,7); motorPairs = zeros(16,7);
+clear locs;
 for iDate = 1:size(allDates,1)
     datFileNum = datFileNumAll{iDate,1};
     for iRun = 1:length(datFileNum)
@@ -132,16 +133,21 @@ for iDate = 1:size(allDates,1)
 
         % Termination in 3b (1-->3b, 2-->3b)
         if strcmp(corticalAreaProbeA{iDate}(fileNum),'3b') || strcmp(corticalAreaProbeB{iDate}(fileNum),'3b')
-            % if strcmp(corticalAreaProbeA{iDate}(fileNum),'3b')
-            %     if strcmp(corticalAreaProbeB{iDate}(fileNum),'1') || strcmp(corticalAreaProbeB{iDate}(fileNum),'2')
-            %         termination3b(fileNum,iDate) = 1; 
-            %     end
-            % else
-            %     if strcmp(corticalAreaProbeA{iDate}(fileNum),'1') || strcmp(corticalAreaProbeA{iDate}(fileNum),'2')
-                    termination3b(fileNum,iDate) = 1; 
-                    locs{fileNum,iDate}  = {corticalAreaProbeA{iDate}{fileNum} corticalAreaProbeB{iDate}{fileNum} };
-                % end
-            % end
+            termination3b(fileNum,iDate) = 1;
+            locs{fileNum,iDate}  = {corticalAreaProbeA{iDate}{fileNum} corticalAreaProbeB{iDate}{fileNum} };
+            if strcmp(corticalAreaProbeA{iDate}(fileNum),'3b')
+                if strcmp(corticalAreaProbeB{iDate}(fileNum),'1') || strcmp(corticalAreaProbeB{iDate}(fileNum),'2') || strcmp(corticalAreaProbeB{iDate}(fileNum),'3a')
+                    s1Pairs(fileNum,iDate) = true; 
+                else%if strcmp(corticalAreaProbeB{iDate}(fileNum),'4') || strcmp(corticalAreaProbeB{iDate}(fileNum),'6')
+                    motorPairs(fileNum,iDate) = true; 
+                end
+            else
+                if strcmp(corticalAreaProbeA{iDate}(fileNum),'1') || strcmp(corticalAreaProbeA{iDate}(fileNum),'2')|| strcmp(corticalAreaProbeA{iDate}(fileNum),'3a')
+                    s1Pairs(fileNum,iDate) = true; 
+                else%if strcmp(corticalAreaProbeA{iDate}(fileNum),'4') || strcmp(corticalAreaProbeA{iDate}(fileNum),'6')
+                    motorPairs(fileNum,iDate) = true; 
+                end
+            end
         end
         
         % % Termination in 3a (1-->3a, 2-->3a)
@@ -197,17 +203,21 @@ for iDate = 1:size(allDates,1)
         %  end
     end
 end
-
+%%
 matSize = size(connValsAll);
 locs = reshape(locs',[91 1]); locs(cellfun(@isempty,locs)) = [];
+sz = cellfun(@isempty,locs);
 
-termination3b    = reshape(termination3b',[matSize(1)*matSize(2) 1]);   termination3b(allVars.removeDataIdx) = [];
-termination3a    = reshape(termination3a',[matSize(1)*matSize(2) 1]);   termination3a(allVars.removeDataIdx) = [];
-terminationArea1 = reshape(terminationArea1',[matSize(1)*matSize(2) 1]);terminationArea1(allVars.removeDataIdx) = [];
-terminationArea2 = reshape(terminationArea2',[matSize(1)*matSize(2) 1]);terminationArea2(allVars.removeDataIdx) = [];
-terminationArea4 = reshape(terminationArea4',[matSize(1)*matSize(2) 1]);terminationArea4(allVars.removeDataIdx) = [];
+termination3b = reshape(termination3b',[matSize(1)*matSize(2) 1]); termination3b(allVars.removeDataIdx) = [];
+s1Pairs       = reshape(s1Pairs',[matSize(1)*matSize(2) 1]);       s1Pairs(allVars.removeDataIdx) = [];
+motorPairs    = reshape(motorPairs',[matSize(1)*matSize(2) 1]);   motorPairs(allVars.removeDataIdx) = [];
+
+% termination3a    = reshape(termination3a',[matSize(1)*matSize(2) 1]);   termination3a(allVars.removeDataIdx) = [];
+% terminationArea1 = reshape(terminationArea1',[matSize(1)*matSize(2) 1]);terminationArea1(allVars.removeDataIdx) = [];
+% terminationArea2 = reshape(terminationArea2',[matSize(1)*matSize(2) 1]);terminationArea2(allVars.removeDataIdx) = [];
+% terminationArea4 = reshape(terminationArea4',[matSize(1)*matSize(2) 1]);terminationArea4(allVars.removeDataIdx) = [];
 %%
-for iArea = 1:5
+for iArea = 1%:5
     switch iArea
         case 1
             areaIdx = logical(termination3b);
@@ -221,41 +231,122 @@ for iArea = 1:5
             areaIdx = logical(terminationArea4); 
     end 
          
-    showScatterPlots(allPACVars.connValsR(areaIdx),allPACVars.medPairCorrR(areaIdx,:),...
-        allPACVars.medCorrEnvelopeR(areaIdx,:),allPACVars.medCorrInfraSlowR(areaIdx,:),...
+    showScatterPlots(allVars.connValsR(areaIdx),allVars.medPairCorrR(areaIdx,:),...
+        allVars.medCorrEnvelopeR(areaIdx,:),allVars.medCorrInfraSlowR(areaIdx,:),...
         'Functional Connectivity','Pairwise correlations',[-0.6 1],[-0.6 1],...
     0.8,-0.5,-0.4,bandLabels)
 end
 
 %% Laminar data
-termination3b(singleChRow) =[]; termination3a(singleChRow)=[]; 
-terminationArea3 = termination3b | termination3a;
-terminationArea4(singleChRow) =[];
+termination3b(singleChRow) =[]; 
+termination3b = logical(termination3b);
+s1Pairs(singleChRow) = []; 
+motorPairs(singleChRow) = [];
+% termination3a(singleChRow)=[]; 
+% terminationArea3 = termination3b | termination3a;
+% terminationArea4(singleChRow) =[];
 %%
-superAll      = allPACVars.medPairCorrSuperR; 
-midAll        = allPACVars.medPairCorrMidR;
-deepAll       = allPACVars.medPairCorrDeepR; 
-superMidPair  = (allPACVars.medPairASuperBMidR + allPACVars.medPairAMidBSuperR)./2;
-superDeepPair = (allPACVars.medPairASuperBDeepR + allPACVars.medPairADeepBSuperR)./2 ;
-midDeepPair   = (allPACVars.medPairAMidBDeepR + allPACVars.medPairADeepBMidR)./2 ; 
+superAll      = allVars.medPairCorrSuperR; 
+midAll        = allVars.medPairCorrMidR;
+deepAll       = allVars.medPairCorrDeepR; 
+superMidPair  = (allVars.medPairASuperBMidR + allVars.medPairAMidBSuperR)./2;
+superDeepPair = (allVars.medPairASuperBDeepR + allVars.medPairADeepBSuperR)./2 ;
+midDeepPair   = (allVars.medPairAMidBDeepR + allVars.medPairADeepBMidR)./2 ; 
 
 %
-superPow         = allPACVars.envelopePairCorrSuperR; 
-midPow           = allPACVars.envelopePairCorrMidR; 
-deepPow          = allPACVars.envelopePairCorrDeepR; 
-superMidPairPow  = (allPACVars.envelopeASuperBMidR + allPACVars.envelopeAMidBSuperR)./2 ;
-superDeepPairPow = (allPACVars.envelopeADeepBSuperR + allPACVars.envelopeASuperBDeepR)./2 ; 
-midDeepPairPow   = (allPACVars.envelopeAMidBDeepR + allPACVars.envelopeADeepBMidR)./2 ;
+superPow         = allVars.envelopePairCorrSuperR; 
+midPow           = allVars.envelopePairCorrMidR; 
+deepPow          = allVars.envelopePairCorrDeepR; 
+superMidPairPow  = (allVars.envelopeASuperBMidR + allVars.envelopeAMidBSuperR)./2 ;
+superDeepPairPow = (allVars.envelopeADeepBSuperR + allVars.envelopeASuperBDeepR)./2 ; 
+midDeepPairPow   = (allVars.envelopeAMidBDeepR + allVars.envelopeADeepBMidR)./2 ;
 
-superInfra         = allPACVars.infraPairCorrSuperR; 
-midInfra           = allPACVars.infraPairCorrMidR; 
-deepInfra          = allPACVars.infraPairCorrDeepR; 
-superMidPairInfra  = (allPACVars.infraASuperBMidR + allPACVars. infraAMidBSuperR)./2 ;
-superDeepPairInfra = (allPACVars.infraASuperBDeepR + allPACVars.infraADeepBSuperR)./2 ; 
-midDeepPairInfra   = (allPACVars.infraAMidBDeepR + allPACVars.infraADeepBMidR)./2 ;
+superInfra         = allVars.infraPairCorrSuperR; 
+midInfra           = allVars.infraPairCorrMidR; 
+deepInfra          = allVars.infraPairCorrDeepR; 
+superMidPairInfra  = (allVars.infraASuperBMidR + allVars. infraAMidBSuperR)./2 ;
+superDeepPairInfra = (allVars.infraASuperBDeepR + allVars.infraADeepBSuperR)./2 ; 
+midDeepPairInfra   = (allVars.infraAMidBDeepR + allVars.infraADeepBMidR)./2 ;
+
+connValsR = allVars.connValsR; connValsR(singleChRow) = [];
+distValsR = allVars.distValsR; distValsR(singleChRow) = [];
+
+%% Synthesis
+flagVal = logical(termination3b); 
+figure; idx = 1;
+for iType = 1:3
+    switch iType
+        case 1
+            superVal = superAll;
+            midVal   = midAll;
+            deepVal  = deepAll;
+            superMid = superMidPair;
+            superDeep = superDeepPair; 
+            midDeep   = midDeepPair; 
+            typeLabel = 'Time series';
+
+        case 2
+            superVal = superPow ;
+            midVal   = midPow ;
+            deepVal  = deepPow ;
+            superMid = superMidPairPow;
+            superDeep = superDeepPairPow ; 
+            midDeep   = midDeepPairPow ; 
+            typeLabel = 'Power';
+        case 3
+            superVal = superInfra;
+            midVal   = midInfra;
+            deepVal  = deepInfra;
+            superMid = superMidPairInfra;
+            superDeep = superDeepPairInfra; 
+            midDeep   = midDeepPairInfra; 
+            typeLabel = 'Infraslow';
+    end 
+
+    [superAllCorr3b(iType,:), pValSuperAll(iType,:)]  = partialcorr(superVal(flagVal,:),connValsR(flagVal),distValsR(flagVal));
+    [superMidCorr3b(iType,:), pValSuperMid(iType,:)] = partialcorr(superMid(flagVal,:),connValsR(flagVal),distValsR(flagVal));
+    [superDeepCorr3b(iType,:), pValSuperDeep(iType,:)] = partialcorr(superDeep(flagVal,:),connValsR(flagVal),distValsR(flagVal));
+    [midAllCorr3b(iType,:), pValMidAll(iType,:)]   = partialcorr(midVal(flagVal,:),connValsR(flagVal),distValsR(flagVal));
+    [midDeepCorr3b(iType,:), pValMidDeep(iType,:)]   = partialcorr(midDeep(flagVal,:),connValsR(flagVal),distValsR(flagVal));
+    [deepAllCorr3b(iType,:), pValDeepAll(iType,:)]  = partialcorr(deepVal(flagVal,:),connValsR(flagVal),distValsR(flagVal));
+    
+    super3b(iType,:) = partialcorr([superVal(flagVal,:); superMid(flagVal,:); superDeep(flagVal,:)],...
+        repmat(connValsR(flagVal),[3 1]),repmat(distValsR(flagVal),[3 1]));
+   
+    mid3b(iType,:) = partialcorr([midVal(flagVal,:); superMid(flagVal,:); midDeep(flagVal,:)],...
+        repmat(connValsR(flagVal),[3 1]),repmat(distValsR(flagVal),[3 1]));
+   
+    deep3b(iType,:) = partialcorr([deepVal(flagVal,:); midDeep(flagVal,:); superDeep(flagVal,:)],...
+        repmat(connValsR(flagVal),[3 1]),repmat(distValsR(flagVal),[3 1]));
+
+    subplot(3,3,idx); boxplot([superVal(flagVal,:); superMid(flagVal,:); superDeep(flagVal,:)]);
+    xticklabels(bandLabels); title(['Superficial - ' typeLabel]);box off;yticks(-0.4:0.2:1); axis square;
+    if iType~=2; ylim([-0.4 1]);  yticks(-0.4:0.2:1); else; yticks([-0.2 0.6]);  yticks(-0.2:0.1:0.6);end
+    subplot(3,3,idx+1); boxplot([midVal(flagVal,:); superMid(flagVal,:); midDeep(flagVal,:)]);
+    xticklabels(bandLabels); title(['Middle - ' typeLabel]);box off;yticks(-0.4:0.2:1);axis square;
+    if iType~=2; ylim([-0.4 1]);  yticks(-0.4:0.2:1); else; yticks([-0.2 0.6]); yticks(-0.2:0.1:0.6); end
+    subplot(3,3,idx+2); boxplot([deepVal(flagVal,:); midDeep(flagVal,:); superDeep(flagVal,:)]);
+    xticklabels(bandLabels); title(['Deep - ' typeLabel]);box off;yticks(-0.4:0.2:1);axis square;
+    if iType~=2; ylim([-0.4 1]);  yticks(-0.4:0.2:1); else; yticks([-0.2 0.6]); yticks(-0.2:0.1:0.6); end
+
+    idx = idx+3;
+end
 
 %%
+figure; 
+subplot(231); imagesc(1:5,1:3,superAllCorr3b); title('S/S');axis square; xticklabels(bandLabels); yticklabels(timeLabels); clim([-0.2 0.5]); colorbar;
+subplot(232); imagesc(1:5,1:3,superMidCorr3b); title('S/M');axis square; xticklabels(bandLabels); yticklabels(timeLabels); clim([-0.2 0.5]);colorbar;
+subplot(233); imagesc(1:5,1:3,superDeepCorr3b); title('S/D');axis square; xticklabels(bandLabels); yticklabels(timeLabels); clim([-0.2 0.5]);colorbar;
+subplot(234); imagesc(1:5,1:3,midAllCorr3b); title('M/M');axis square; xticklabels(bandLabels); yticklabels(timeLabels); clim([-0.2 0.5]);colorbar;
+subplot(235); imagesc(1:5,1:3,midDeepCorr3b); title('M/D');axis square; xticklabels(bandLabels); yticklabels(timeLabels); clim([-0.2 0.5]);colorbar;
+subplot(236); imagesc(1:5,1:3,deepAllCorr3b); title('D/D');axis square; xticklabels(bandLabels); yticklabels(timeLabels); clim([-0.2 0.5]);colorbar;
 
+%%
+figure;
+subplot(131); imagesc(1:5,1:3,super3b); title('Superficial');axis square; xticklabels(bandLabels); yticklabels(timeLabels); clim([-0.1 0.35]); colorbar;
+subplot(132); imagesc(1:5,1:3,mid3b); title('Middle');axis square; xticklabels(bandLabels); yticklabels(timeLabels); clim([-0.1 0.35]); colorbar;
+subplot(133); imagesc(1:5,1:3,deep3b); title('Deep');axis square; xticklabels(bandLabels); yticklabels(timeLabels); clim([-0.1 0.35]); colorbar;
+%%
 figure; idx = 1; 
 for iFig = 1:3
     clear sComp mComp dComp
@@ -355,14 +446,13 @@ stepSize = 10e3;
 chSplit = 6;
 
 % Get the phase amplitude coupling for the recordings...
-for iDate = 6:7%size(allDates,1)
+for iDate = 2:size(allDates,1)
     clear expDate datFileNum saveFolder
     expDate    = allDates(iDate,:);
     datFileNum = datFileNumAll{iDate,1};
 
     for iRun = 1:length(datFileNum)
 
-        if iDate==2 && iRun == 1; continue; end
         fileNum = datFileNum(iRun);
     clear modIdxA2A modIdxB2B modIdxAamp2Bphase modIdxAamp2Bphase
         chA = estChInCortexA{iDate}(iRun,:);
@@ -370,7 +460,7 @@ for iDate = 6:7%size(allDates,1)
 
         if chA(1)== 0 || chB(1)==0; continue; end
 
-        if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramVals_10sec_' num2str(fileNum) '.mat'],'file') || 1%
+        if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramVals_10sec_' num2str(fileNum) '.mat'],'file') %
             clc; disp(['Processing data for ' monkeyName ': Date: ' allDates(iDate,:) ' ; File: ' num2str(fileNum)]);
             tic;
 
@@ -380,27 +470,36 @@ for iDate = 6:7%size(allDates,1)
                 estChInCortexB{iDate}(iRun,:),gammaRange,lowFreqRange);
 
             % Get all channel combinations
-            combAllCh = table2array(combinations(1:size(amplitudeA,3),1:size(amplitudeB,3)));
+            combAllCh    = table2array(combinations(1:size(amplitudeA,3),1:size(amplitudeB,3)));
+            combAllChA2A = table2array(combinations(1:size(amplitudeA,3),1:size(amplitudeA,3)));
+            combAllChB2B = table2array(combinations(1:size(amplitudeB,3),1:size(amplitudeB,3)));
+           
             dataLen   = size(amplitudeA,2);
 
             % Calculate windows
             winStart = 1:stepSize:(dataLen-winSize);
             winEnd   = winStart+winSize-1;
             nWin     = numel(winStart);
-            if nWin>60; nWin = 60; winStart = winStart(1:nWin); winEnd = winEnd(1:nWin); end 
+            if nWin>60; nWin = 60; winStart = winStart(1:nWin); winEnd = winEnd(1:nWin); end
 
-            [modIdxA2A,modIdxB2B,modIdxAamp2Bphase,modIdxAphase2Bamp] = getPhaseAmpCoupling(phaseA,...
-    amplitudeA,phaseB,amplitudeB,winStart,winEnd,winSize,combAllCh(:,1), combAllCh(:,2));
+            %         [modIdxA2A,modIdxB2B,modIdxAamp2Bphase,modIdxAphase2Bamp] = getPhaseAmpCoupling(phaseA,...
+            % amplitudeA,phaseB,amplitudeB,winStart,winEnd,winSize,combAllCh(:,1), combAllCh(:,2));
 
+            modIdxA2A = getPhaseAmpCoupling_v2(phaseA,amplitudeA,winStart,winEnd,winSize,combAllChA2A(:,1),combAllChA2A(:,2));
+            modIdxB2B = getPhaseAmpCoupling_v2(phaseB,amplitudeB,winStart,winEnd,winSize,combAllChB2B(:,1),combAllChB2B(:,2));
+
+            modIdxAamp2Bphase = getPhaseAmpCoupling_v2(phaseB,amplitudeA,winStart,winEnd,winSize,combAllCh(:,1), combAllCh(:,2));
+            modIdxAphase2Bamp = getPhaseAmpCoupling_v2(phaseA,amplitudeB,winStart,winEnd,winSize,combAllCh(:,2),combAllCh(:,1)); 
 
             save(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramVals_10sec_' num2str(fileNum) '.mat'],...
-                'modIdxA2A','modIdxB2B','modIdxAamp2Bphase','modIdxAphase2Bamp','combAllCh');
+                'modIdxA2A','modIdxB2B','modIdxAamp2Bphase','modIdxAphase2Bamp','combAllCh','combAllChA2A','combAllChB2B');
         toc;
         end
 
         allPACVars{iRun,iDate} = matfile(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramVals_10sec_' num2str(fileNum) '.mat']);
     end
 end
+
 
 %% Getting the surrogate/shuffled distribution
 % winSize = [10 20 30 40 50 100].*1e3;
@@ -413,12 +512,12 @@ stepSize = 10e3;
 % shiftLen = [1 5 10 20 50 100].*1e3;
 % nShift   = length(shiftLen);
 
-for iDate = 2:5%size(allDates,1)
+for iDate = 2:size(allDates,1)
     expDate    = allDates(iDate,:);
     datFileNum = datFileNumAll{iDate,1};
 
     for iRun = 1:length(datFileNum)
-        if iDate == 3 && iRun>8; continue; end 
+        % if iDate == 3 && iRun>8; continue; end 
 
         fileNum = datFileNum(iRun);
         chA = estChInCortexA{iDate}(iRun,:);
@@ -436,7 +535,7 @@ for iDate = 2:5%size(allDates,1)
 
             dataLen = size(amplitudeA,2);
             nChan      = min(size(amplitudeA,3),size(amplitudeB,3));
-
+            
             amplitudeA = amplitudeA(:,:,1:nChan);
             amplitudeB = amplitudeB(:,:,1:nChan);
             phaseA     = phaseA(:,:,1:nChan);
@@ -445,11 +544,7 @@ for iDate = 2:5%size(allDates,1)
             winStart = 1:stepSize:(dataLen-winSize);
             winEnd   = winStart+stepSize-1;
             nWin     = numel(winStart);
-
-            modIdxAllA2BShuffleT = NaN(nWin,nHigh,nLow,nChan,'single'); % size is shift length x # time windows x high freq x low freq x # channels
-            modIdxAllB2AShuffleT = NaN(nWin,nHigh,nLow,nChan,'single');
-            modIdxAllA2AShuffleT = NaN(nWin,nHigh,nLow,nChan,'single');
-            modIdxAllB2BShuffleT = NaN(nWin,nHigh,nLow,nChan,'single');
+            if nWin>60; nWin = 60; winStart = winStart(1:nWin); winEnd = winEnd(1:nWin); end
 
             % Create artificial surrogates for the data
             % Shuffle every sample of the phase time course
@@ -462,40 +557,13 @@ for iDate = 2:5%size(allDates,1)
             phaseAShuff = phaseA(:,comb1,:);
             phaseBShuff = phaseB(:,comb1,:); 
 
-            highFreqAconst = parallel.pool.Constant(amplitudeA);
-            highFreqBconst = parallel.pool.Constant(amplitudeB);
-            lowFreqAconst  = parallel.pool.Constant(phaseAShuff);
-            lowFreqBconst  = parallel.pool.Constant(phaseBShuff);
-
             tic;
-            parfor iHigh = 1:nHigh
-                % Local copies
-                lowA = lowFreqAconst.Value;
-                lowB = lowFreqBconst.Value;
-                highA = highFreqAconst.Value;
-                highB = highFreqBconst.Value;
 
-                modA2BT = NaN(nWin,nLow,nChan,'single');
-                modB2AT = NaN(nWin,nLow,nChan,'single');
-                modA2AT = NaN(nWin,nLow,nChan,'single');
-                modB2BT = NaN(nWin,nLow,nChan,'single');
+            modIdxAllA2AShuffleT = getPhaseAmpCoupling_v2(phaseAShuff,amplitudeA,winStart,winEnd,winSize,(1:nChan)',(1:nChan)');
+            modIdxAllB2BShuffleT = getPhaseAmpCoupling_v2(phaseBShuff,amplitudeB,winStart,winEnd,winSize,(1:nChan)',(1:nChan)');
 
-                for iWin = 1:nWin
-                    idx = winStart(iWin):winEnd(iWin);
-                    for iLow = 1:nLow
-                        [modA2BT(iWin,iLow,:),~] = getPhaseAmpCoupling(squeeze(lowB(iLow,idx,1:nChan)),squeeze(highA(iHigh,idx,1:nChan)));
-                        [modB2AT(iWin,iLow,:),~] = getPhaseAmpCoupling(squeeze(lowA(iLow,idx,1:nChan)),squeeze(highB(iHigh,idx,1:nChan)));
-                        [modA2AT(iWin,iLow,:),~] = getPhaseAmpCoupling(squeeze(lowA(iLow,idx,1:nChan)),squeeze(highA(iHigh,idx,1:nChan)));
-                        [modB2BT(iWin,iLow,:),~] = getPhaseAmpCoupling(squeeze(lowB(iLow,idx,1:nChan)),squeeze(highB(iHigh,idx,1:nChan)));
-                    end
-                end
-
-                modIdxAllA2BShuffleT(:,iHigh,:,:) = modA2BT;
-                modIdxAllB2AShuffleT(:,iHigh,:,:) = modB2AT;
-                modIdxAllA2AShuffleT(:,iHigh,:,:) = modA2AT;
-                modIdxAllB2BShuffleT(:,iHigh,:,:) = modB2BT;
-
-            end
+            modIdxAllA2BShuffleT = getPhaseAmpCoupling_v2(phaseBShuff,amplitudeA,winStart,winEnd,winSize,(1:nChan)',(1:nChan)');
+            modIdxAllB2AShuffleT = getPhaseAmpCoupling_v2(phaseAShuff,amplitudeB,winStart,winEnd,winSize,(1:nChan)',(1:nChan)');
             toc;
 
             save(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\modulogramCtrl10sec_' num2str(fileNum) '.mat'],...
@@ -516,6 +584,32 @@ for iL = 1:size(allCtrlValsT,2)
     b2aShuffle(iL,:) = reshape(squeeze(median(allCtrlValsT{iL}.modIdxAllB2AShuffleT,[1,4],'omitnan')),[nLow*nHigh,1]); 
     a2aShuffle(iL,:) = reshape(squeeze(median(allCtrlValsT{iL}.modIdxAllA2AShuffleT,[1,4],'omitnan')),[nLow*nHigh,1]);
     b2bShuffle(iL,:) = reshape(squeeze(median(allCtrlValsT{iL}.modIdxAllB2BShuffleT,[1 4],'omitnan')),[nLow*nHigh,1]); 
+end
+
+% Getting the 99th percentile value and setting it as threshold
+a2bThresh = prctile(a2bShuffle,99)';
+b2aThresh = prctile(b2aShuffle,99)';
+a2aThresh = prctile(a2aShuffle,99)';
+b2bThresh = prctile(b2bShuffle,99)'; 
+
+%%
+
+figure; 
+for iDate = 6%2:7
+    expDate    = allDates(iDate,:);
+    datFileNum = datFileNumAll{iDate,1};
+    for iRun = 4%1:length(datFileNum)
+        if isempty(allPACVars{iRun,iDate}); continue; end
+         tempAvgBtwMI = reshape(squeeze(median(cat(3,squeeze(median(allPACVars{iRun,iDate}.modIdxAamp2Bphase,[1 4],'omitnan')),...
+            squeeze(median(allPACVars{iRun,iDate}.modIdxAphase2Bamp,[1 4],'omitnan'))),3,'omitnan')),[nHigh*nLow 1]);
+         tempAvgBtwMI(tempAvgBtwMI<a2bThresh | tempAvgBtwMI <b2aThresh) = 0;
+         % contourf(reshape(tempAvgBtwMI,[nHigh nLow]),'lines','none'); 
+         imagesc(imgaussian(reshape(tempAvgBtwMI,[nHigh nLow]),1));
+         set(gca,'YDir','normal'); clim([0 5e-4]);colorbar; axis square;shading interp;
+         % set(gca,'YDir','normal'); clim([0 6e-4]);colorbar; axis square;
+         title(['date: ' expDate ' run:' num2str(iRun)]); yticks(1:nHigh); xticks(1:nLow);
+         yticklabels(gammaRange); xticklabels(lowFreqRange);
+    end
 end
 
 %% Synthesizing the results
@@ -539,16 +633,28 @@ for iDate = 2:size(allDates,1)
         maxChA = max(chComb(:,1));
         maxChB = max(chComb(:,2));
 
-        avgMIBetween(iRun,iDate,:) = reshape(squeeze(median(cat(3,squeeze(median(allPACVars{iRun,iDate}.modIdxAamp2Bphase,[1 4],'omitnan')),...
+        % Between probes
+        tempAvgBtwMI = reshape(squeeze(median(cat(3,squeeze(median(allPACVars{iRun,iDate}.modIdxAamp2Bphase,[1 4],'omitnan')),...
             squeeze(median(allPACVars{iRun,iDate}.modIdxAphase2Bamp,[1 4],'omitnan'))),3,'omitnan')),[nHigh*nLow 1]);
+        
+        % Within probes
+        tempAvgWithinMI = reshape(squeeze(median(cat(3,squeeze(median(allPACVars{iRun,iDate}.modIdxA2A,[1 4],'omitnan')),...
+            squeeze(median(allPACVars{iRun,iDate}.modIdxB2B,[1 4],'omitnan'))),3,'omitnan')),[nHigh*nLow 1]);
 
-        thetaLowGammaPairs(iRun,iDate) = median(avgMI(iRun,iDate,thetaLowGammaIdx),'omitnan');
-        thetaHighGammaPairs(iRun,iDate) = median(avgMI(iRun,iDate,thetaHighGammaIdx),'omitnan');
+        % Removing the pairs that do not have significant modulation
+        tempAvgBtwMI(tempAvgBtwMI<a2bThresh | tempAvgBtwMI <b2aThresh) = NaN;
+        tempAvgWithinMI(tempAvgWithinMI<a2aThresh | tempAvgWithinMI<b2bThresh) = NaN;
 
-        % avgAllPairs = reshape(squeeze(median(cat(4,squeeze(median(allPACVars{iRun,iDate}.modIdxAamp2Bphase,1,'omitnan')),...
-        %    squeeze(median(allPACVars{iRun,iDate}.modIdxAamp2Bphase,1,'omitnan'))),4,'omitnan')),[nHigh*nLow size(chComb,1)]);
+        avgMIBetween(iRun,iDate,:) = tempAvgBtwMI;
+        avgMIWithin(iRun,iDate,:)  = tempAvgWithinMI;
 
-        % amplitude of the electrode is the reference
+        thetaLowGammaPairsBtw(iRun,iDate)  = median(avgMIBetween(iRun,iDate,thetaLowGammaIdx),'omitnan');
+        thetaHighGammaPairsBtw(iRun,iDate) = median(avgMIBetween(iRun,iDate,thetaHighGammaIdx),'omitnan');
+
+        thetaLowGammaPairsWithin(iRun,iDate)  = median(avgMIWithin(iRun,iDate,thetaLowGammaIdx),'omitnan');
+        thetaHighGammaPairsWithin(iRun,iDate) = median(avgMIWithin(iRun,iDate,thetaHighGammaIdx),'omitnan');
+
+        % Amplitude is the reference
         superA = ismember(chComb,table2array(combinations(1:chSplit,1:maxChB)),'rows');
         superB = ismember(chComb,table2array(combinations(1:maxChA,1:chSplit)),'rows');
 
@@ -557,36 +663,146 @@ for iDate = 2:size(allDates,1)
 
         deepA = ismember(chComb,table2array(combinations(2*chSplit+1:maxChA,1:maxChB)),'rows');
         deepB = ismember(chComb,table2array(combinations(1:maxChA,2*chSplit+1:maxChB)),'rows');
-
+        
         pacVals(iRun,iDate).aAmpBPhase = allPACVars{iRun,iDate}.modIdxAamp2Bphase;
         pacVals(iRun,iDate).aPhaseBAmp = allPACVars{iRun,iDate}.modIdxAphase2Bamp;
+        pacVals(iRun,iDate).a2a        = allPACVars{iRun,iDate}.modIdxA2A; 
+        pacVals(iRun,iDate).b2b        = allPACVars{iRun,iDate}.modIdxB2B; 
 
-        pacVals(iRun,iDate).laminarAmpRef(1,:) = reshape(median(cat(3,squeeze(median(pacVals(iRun,iDate).aAmpBPhase(:,:,:,superA),[1 4],'omitnan')),...
-            squeeze(median(pacVals(iRun,iDate).aPhaseBAmp(:,:,:,superB),[1 4],'omitnan'))),3,'omitnan'),[nHigh*nLow 1]);
+        for iRef = 1:2
+            switch iRef
+                case 1
+                    super1Idx = superA;
+                    mid1Idx   = midA;
+                    deep1Idx  = deepA;
 
-        pacVals(iRun,iDate).laminarAmpRef(2,:) = reshape(median(cat(3,squeeze(median(pacVals(iRun,iDate).aAmpBPhase(:,:,:,midA),[1 4],'omitnan')),...
-            squeeze(median(pacVals(iRun,iDate).aPhaseBAmp(:,:,:,midB),[1 4],'omitnan'))),3,'omitnan'),[nHigh*nLow 1]);
+                    super2Idx = superB;
+                    mid2Idx   = midB;
+                    deep2Idx  = deepB;
 
-        pacVals(iRun,iDate).laminarAmpRef(3,:) = reshape(median(cat(3,squeeze(median(pacVals(iRun,iDate).aAmpBPhase(:,:,:,deepA),[1 4],'omitnan')),...
-            squeeze(median(pacVals(iRun,iDate).aPhaseBAmp(:,:,:,deepB),[1 4],'omitnan'))),3,'omitnan'),[nHigh*nLow 1]);
+                case 2
+                    super1Idx = superB;
+                    mid1Idx   = midB;
+                    deep1Idx  = deepB;
 
-         pacVals(iRun,iDate).laminarPhaseRef(1,:) = reshape(median(cat(3,squeeze(median(pacVals(iRun,iDate).aAmpBPhase(:,:,:,superB),[1 4],'omitnan')),...
-            squeeze(median(pacVals(iRun,iDate).aPhaseBAmp(:,:,:,superA),[1 4],'omitnan'))),3,'omitnan'),[nHigh*nLow 1]);
+                    super2Idx = superA;
+                    mid2Idx   = midA;
+                    deep2Idx  = deepA;                 
+            end
+            
+            % Between probes
+            superVal = reshape(median(cat(3,squeeze(median(pacVals(iRun,iDate).aAmpBPhase(:,:,:,super1Idx),[1 4],'omitnan')),...
+                squeeze(median(pacVals(iRun,iDate).aPhaseBAmp(:,:,:,super2Idx),[1 4],'omitnan'))),3,'omitnan'),[nHigh*nLow 1]);
 
-        pacVals(iRun,iDate).laminarPhaseRef(2,:) = reshape(median(cat(3,squeeze(median(pacVals(iRun,iDate).aAmpBPhase(:,:,:,midB),[1 4],'omitnan')),...
-            squeeze(median(pacVals(iRun,iDate).aPhaseBAmp(:,:,:,midA),[1 4],'omitnan'))),3,'omitnan'),[nHigh*nLow 1]);
+            midVal = reshape(median(cat(3,squeeze(median(pacVals(iRun,iDate).aAmpBPhase(:,:,:,mid1Idx),[1 4],'omitnan')),...
+                squeeze(median(pacVals(iRun,iDate).aPhaseBAmp(:,:,:,mid2Idx),[1 4],'omitnan'))),3,'omitnan'),[nHigh*nLow 1]);
 
-        pacVals(iRun,iDate).laminarPhaseRef(3,:) = reshape(median(cat(3,squeeze(median(pacVals(iRun,iDate).aAmpBPhase(:,:,:,deepB),[1 4],'omitnan')),...
-            squeeze(median(pacVals(iRun,iDate).aPhaseBAmp(:,:,:,deepA),[1 4],'omitnan'))),3,'omitnan'),[nHigh*nLow 1]);
+            deepVal = reshape(median(cat(3,squeeze(median(pacVals(iRun,iDate).aAmpBPhase(:,:,:,deep1Idx),[1 4],'omitnan')),...
+                squeeze(median(pacVals(iRun,iDate).aPhaseBAmp(:,:,:,deep2Idx),[1 4],'omitnan'))),3,'omitnan'),[nHigh*nLow 1]);
 
-        pacVals(iRun,iDate).thetaLowGammaAmp    = median(pacVals(iRun,iDate).laminarAmpRef(:,thetaLowGammaIdx),2,'omitnan');
-        pacVals(iRun,iDate).thetaHighGammaAmp   = median(pacVals(iRun,iDate).laminarAmpRef(:,thetaHighGammaIdx),2,'omitnan');
-        pacVals(iRun,iDate).thetaLowGammaPhase  = median(pacVals(iRun,iDate).laminarPhaseRef(:,thetaLowGammaIdx),2,'omitnan');
-        pacVals(iRun,iDate).thetaHighGammaPhase = median(pacVals(iRun,iDate).laminarPhaseRef(:,thetaHighGammaIdx),2,'omitnan');
+            superVal(superVal<a2bThresh | superVal<b2aThresh) = NaN; 
+            midVal(midVal<a2bThresh | midVal<b2aThresh)       = NaN; 
+            deepVal(deepVal<a2bThresh | deepVal<b2aThresh)    = NaN; 
+
+            % Within probes - To do
+
+
+            switch iRef 
+                case 1
+                    % Amplitude reference
+                    pacVals(iRun,iDate).laminarAmpRefBtw(1,:) = superVal;
+                    pacVals(iRun,iDate).laminarAmpRefBtw(2,:) = midVal;
+                    pacVals(iRun,iDate).laminarAmpRefBtw(3,:) = deepVal;
+
+                case 2
+                    % Phase reference
+                    pacVals(iRun,iDate).laminarPhaseRefBtw(1,:) = superVal;
+                    pacVals(iRun,iDate).laminarPhaseRefBtw(2,:) = midVal;
+                    pacVals(iRun,iDate).laminarPhaseRefBtw(3,:) = deepVal; 
+            end 
+        end
+        
+
+        pacVals(iRun,iDate).thetaLowGammaAmp    = median(pacVals(iRun,iDate).laminarAmpRefBtw(:,thetaLowGammaIdx),2,'omitnan');
+        pacVals(iRun,iDate).thetaHighGammaAmp   = median(pacVals(iRun,iDate).laminarAmpRefBtw(:,thetaHighGammaIdx),2,'omitnan');
+        pacVals(iRun,iDate).thetaLowGammaPhase  = median(pacVals(iRun,iDate).laminarPhaseRefBtw(:,thetaLowGammaIdx),2,'omitnan');
+        pacVals(iRun,iDate).thetaHighGammaPhase = median(pacVals(iRun,iDate).laminarPhaseRefBtw(:,thetaHighGammaIdx),2,'omitnan');
 
     end
 
 end
+
+%%  Rearranging the variables
+ miMatSize = numel(thetaHighGammaPairsWithin);
+avgMIBetweenT = reshape(avgMIBetween, [miMatSize nHigh*nLow]);
+avgMIWithinT = reshape(avgMIWithin,[miMatSize nHigh*nLow]);
+zeroIdx = (all(avgMIBetweenT==0,2));
+avgMIBetweenT(zeroIdx,:) = [];
+avgMIWithinT(zeroIdx,:) = [];
+
+thetaHighGammaPairsBtw(thetaHighGammaPairsBtw==0)= NaN; 
+thetaLowGammaPairsBtw(thetaLowGammaPairsBtw ==0) = NaN; 
+
+thetaHighGammaPairsWithin(thetaHighGammaPairsWithin==0)= NaN; 
+thetaLowGammaPairsWithin(thetaLowGammaPairsWithin ==0) = NaN; 
+
+
+
+thetaHGBtwT = reshape(thetaHighGammaPairsBtw,[miMatSize 1]);    thetaHGBtwT(isnan(thetaHGBtwT)) = [];
+thetaLGBtwT = reshape(thetaLowGammaPairsBtw,[miMatSize 1]);     thetaLGBtwT(isnan(thetaLGBtwT)) = [];
+thetaHGWthT = reshape(thetaHighGammaPairsWithin,[miMatSize 1]); thetaHGWthT(isnan(thetaHGWthT)) = [];
+thetaLGWthT = reshape(thetaLowGammaPairsWithin,[miMatSize 1]);  thetaLGWthT(isnan(thetaLGWthT)) = [];
+
+%% Plotting the average 
+figure;
+miBtw = avgMIBetweenT;miBtw(isnan(miBtw))=0;
+% imagesc(imgaussian(reshape(median(miBtw,1),[nHigh nLow]),1));
+contourf(reshape(median(miBtw,1),[nHigh nLow]),'lines','none');
+set(gca,'YDir','normal'); clim([0 5e-4]);colorbar; axis square;shading interp
+% set(gca,'YDir','normal'); clim([0 6e-4]);colorbar; axis square;
+yticks(1:nHigh); xticks(1:nLow); yticklabels(gammaRange); xticklabels(lowFreqRange);
+
+
+%% 
+figure; 
+subplot(121); boxplot([median(avgMIBetweenT,2,'omitnan') median(avgMIWithinT,2,'omitnan')],{'Between probes','Within probes'}); 
+box off; axis square; ylim([2.7e-4 4.3e-4]); ylabel('Average modulation index');
+subplot(122);violin([median(avgMIBetweenT,2,'omitnan') median(avgMIWithinT,2,'omitnan')],{'Between probes','Within probes'}); 
+box off; axis square; ylim([2.5e-4 4.5e-4]); ylabel('Average modulation index');
+
+%% 
+figure;
+subplot(121); boxplot([thetaLGBtwT thetaLGWthT thetaHGBtwT thetaHGWthT],{'Theta_LowGamma Between', 'Theta_LowGamma Within',...
+    'Theta_highGamma Between','Theta_highGamma Within'});
+box off; axis square; ylim([2.4e-4 7e-4]);ylabel('Average modulation index');
+
+subplot(122); violin([thetaLGBtwT thetaLGWthT thetaHGBtwT thetaHGWthT],{'Theta_LowGamma Between', 'Theta_LowGamma Within',...
+    'Theta_highGamma Between','Theta_highGamma Within'});
+box off; axis square; ylim([1e-4 8e-4]);ylabel('Average modulation index');
+
+%% 
+connValsNew = connValsAll; connValsNew = reshape(connValsNew,[miMatSize 1]);
+connValsNew(zeroIdx) = [];
+
+distValsNew = distSitesAll; distValsNew = reshape(distValsNew,[miMatSize 1]); 
+distValsNew(zeroIdx)= [];
+%%
+figure; 
+showLinearFit(connValsNew,median(avgMIBetweenT,2,'omitnan')); 
+ylim([2.8e-4 3.8e-4]); axis square;
+
+%%
+figure; 
+subplot(121); 
+showLinearFit(connValsNew,thetaLGBtwT); 
+ylim([2.8e-4 7e-4]); axis square;
+ylabel('Theta-low gamma MI');
+
+subplot(122); 
+showLinearFit(connValsNew,thetaHGBtwT); 
+ylim([2.8e-4 7e-4]); axis square; 
+xlabel('Functional connectivity'); 
+ylabel('Theta-high gamma MI');
 
 %%
 for iDate = 2%:5%size(allDates,1)
@@ -2223,6 +2439,9 @@ plot(xVal,yVal,'o','MarkerSize',5,'MarkerFaceColor',[0 0.4470 0.7410]); hold on;
 coeff = polyfit(xVal,yVal,1);
 xFit  = linspace(min(xVal),max(xVal),1000);
 yFit  = polyval(coeff,xFit); mdl = fitlm(xVal,yVal);
+% coeff = fit(xVal,double(yVal),'poly1','Robust','LAR');
+% xFit  = linspace(min(xVal),max(xVal),1000);
+% yFit  = coeff.p1*xFit + coeff.p2; mdl = fitlm(xVal,yVal,'RobustOpts','on');
 plot(xFit,yFit,'-k','LineWidth',1);
 if nargin<3
     textLocX  = max(xVal)-0.2*max(xVal);

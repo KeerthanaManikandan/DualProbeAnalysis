@@ -1,5 +1,5 @@
 function [modIdxA2A,modIdxB2B,modIdxAamp2Bphase,modIdxAphase2Bamp] = getPhaseAmpCoupling(phaseA,...
-    amplitudeA,phaseB,amplitudeB,winStart,winEnd,winSize,chAIdx, chBIdx)
+    amplitudeA,phaseB,amplitudeB,winStart,winEnd,winSize,chAIdx, chBIdx,chAPhaseIdx,chBPhaseIdx)
 
 % Calculate the phase amplitude coupling.
 % Based on Tort et al (2010), Journal of Neurophysiology 
@@ -51,12 +51,17 @@ parfor iWin = 1:nWin
 
     amplitudeATemp = squeeze(amplitudeA(:,winStart(iWin):winEnd(iWin),chAIdx)); 
     phaseATemp     = squeeze(phaseA(:,winStart(iWin):winEnd(iWin),chAIdx)); %#ok<*PFBNS>
+    phaseA2ATemp   = squeeze(phaseA(:,winStart(iWin):winEnd(iWin),chAPhaseIdx)); %#ok<*NASGU>
 
     amplitudeBTemp = squeeze(amplitudeB(:,winStart(iWin):winEnd(iWin),chBIdx)); 
-    phaseBTemp     = squeeze(phaseB(:,winStart(iWin):winEnd(iWin),chBIdx)); 
+    phaseBTemp     = squeeze(phaseB(:,winStart(iWin):winEnd(iWin),chBIdx));
+    phaseB2BTemp   = squeeze(phaseA(:,winStart(iWin):winEnd(iWin),chBPhaseIdx));
 
     [~,~,binA]     = histcounts(phaseATemp,'BinEdges',binEdges); binA = single(binA);
     [~,~,binB]     = histcounts(phaseBTemp,'BinEdges',binEdges); binB = single(binB); 
+
+    [~,~,binA2A]     = histcounts(phaseA2ATemp,'BinEdges',binEdges); binA2A = single(binA2A);
+    [~,~,binB2B]     = histcounts(phaseB2BTemp,'BinEdges',binEdges); binB2B = single(binB2B); 
     
     modIdxTempA2A    = NaN(nHigh, nLow, nChan, 'single');
     modIdxTempB2B    = NaN(nHigh, nLow, nChan, 'single');
@@ -77,6 +82,9 @@ parfor iWin = 1:nWin
             binBLow = squeeze(binB(iLow,:,:));
             binACol = binALow(:);         
             binBCol = binBLow(:);
+            
+            binA2ALow = squeeze(binA2A(iLow,:,:)); binA2ALow = binA2ALow(:);
+            binB2BLow = squeeze(binB2B(iLow,:,:)); binB2BLow = binB2BLow(:); 
 
             % pjA2A    = zeros(nBins,nChan); 
             % pjB2B    = zeros(nBins,nChan); 
