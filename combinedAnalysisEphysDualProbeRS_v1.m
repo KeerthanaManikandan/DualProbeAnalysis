@@ -132,11 +132,11 @@ for iType = 1:3
     
     % vals = (vals-mean(vals))./std(vals);
     y = zscore(connVals);
-    X  = zscore(vals);
+    X  = zscore([vals distVals]);
     clear  beta sigma eVal covMat
 
     % Get the linear model 
-    mdlAll{iType} = fitlm(X,y,'VarNames',{'Theta','Alpha','Beta','Gamma','Spk','FC'});
+    % mdlAll{iType} = fitlm(X,y,'VarNames',{'Theta','Alpha','Beta','Gamma','Spk','FC'});
     
     % Relative weights analysis to determine contributions of predictors
     [relImp(iType), r2(iType)] = rwa(X,y,bandLabels');
@@ -375,6 +375,7 @@ for iBand = 1:5
     sgtitle(bandLabels{iBand}); ylim([-0.2 1]); box off; 
 end
 
+
 %% Keeping superficial, middle, deep as reference and obtaining the distributions
 figure;
 for iBand = 1:5
@@ -385,6 +386,64 @@ for iBand = 1:5
     title(bandLabels{iBand}); ylim([-0.2 1]); box off; 
 
 end
+
+%% Inter and intra-area correlations
+figure;
+medEnvNew = medEnvelopeCorr(:,4);
+medEnvNew(find(singleChRow)+42,:) = []; medEnvNew = corr(medEnvNew,connValsNew);
+violin([medEnvNew(ssLoc) ...
+    [NaN(3,1);medEnvNew(mmLoc)] [NaN(6,1);medEnvNew(smLoc)]]);
+
+%%
+ssVals = [[superAllCorr(ssLoc,4); superMidPairPow(ssLoc,4) ;superDeepPairPow(ssLoc,4)]...
+    [midAllCorr(ssLoc,iBand); superMidPairPow(ssLoc,iBand) ;midDeepPairPow(ssLoc,iBand)]...
+    [deepAllCorr(ssLoc,iBand) ; superDeepPairPow(ssLoc,iBand); midDeepPairPow(ssLoc,iBand)]];
+
+mmVals = [[superAllCorr(ssLoc,4); superMidPairPow(ssLoc,4) ;superDeepPairPow(ssLoc,4)]...
+    [midAllCorr(ssLoc,iBand); superMidPairPow(ssLoc,iBand) ;midDeepPairPow(ssLoc,iBand)]...
+    [deepAllCorr(ssLoc,iBand) ; superDeepPairPow(ssLoc,iBand); midDeepPairPow(ssLoc,iBand)]];
+
+smVals = [[superAllCorr(ssLoc,4); superMidPairPow(ssLoc,4) ;superDeepPairPow(ssLoc,4)]...
+    [midAllCorr(ssLoc,iBand); superMidPairPow(ssLoc,iBand) ;midDeepPairPow(ssLoc,iBand)]...
+    [deepAllCorr(ssLoc,iBand) ; superDeepPairPow(ssLoc,iBand); midDeepPairPow(ssLoc,iBand)]];
+
+
+%% Plot heatmap of correlations
+for iArea = 1:4
+    switch iArea
+        case 1
+            areaVal = ssLoc;
+            areaTitle  = 'S1-S1';
+        case 2
+            areaVal = mmLoc;
+            areaTitle  = 'Motor-Motor';
+        case 3
+            areaVal = smLoc;
+            areaTitle = 'S1-motor';
+        case 4
+            areaVal = true(size(superAllCorr,1),1);
+            areaTitle  = 'All pairs';
+    end
+
+    figure;
+    for iBand = 1:5
+        subplot(3,2,iBand);
+        plotMat = [median(superAllCorr(areaVal,iBand)) median(superMidPairPow(areaVal,iBand))  median(superDeepPairPow(areaVal,iBand)); ...
+           median(superMidPairPow(areaVal,iBand))  median(midAllCorr(areaVal,iBand)) median(midDeepPairPow(areaVal,iBand));...
+            median(superDeepPairPow(areaVal,iBand))  median(midDeepPairPow(areaVal,iBand)) median(deepAllCorr(areaVal,iBand)) ];
+        imagesc(plotMat); axis square; xticklabels({'S','M','D'});yticklabels({'S','M','D'});
+        colorbar; title(bandLabels{iBand}); clim([0 0.3]);
+        
+    end
+    sgtitle(areaTitle);
+end
+
+%%
+figure;
+super = [superAllCorr; superMidPairPow;superDeepPairPow];
+mid   = [superMidPairPow; midAllCorr; midDeepPairPow];
+deep  = [superDeepPairPow; midDeepPairPow; deepAllCorr];
+
 
 %% Plotting the main effects
 figure;
@@ -600,11 +659,21 @@ for iPlot = 1:3
     [p(iPlot,:),~,stats{iPlot}] = anova1([allSuper(:,4) allMid(:,4) allDeep(:,4) superMid(:,4) midDeep(:,4) superDeep(:,4)],[],'off');
     [c{iPlot}] = multcompare(stats{iPlot},'CriticalValueType','bonferroni','Display','off');
 
-    % figure;imagesc([rAllSuper(1,4) rAllMid(1,4) rAllDeep(1,4) corrSuperMid(1,4) corrMidDeep(1,4) corrSuperDeep(1,4);...
-    %     rAllSuper(2,4) rAllMid(2,4) rAllDeep(2,4) corrSuperMid(2,4) corrMidDeep(2,4) corrSuperDeep(2,4);...
-    %     rAllSuper(3,4) rAllMid(3,4) rAllDeep(3,4) corrSuperMid(3,4) corrMidDeep(3,4) corrSuperDeep(3,4)]);
-    % colormap turbo; colorbar; clim([0 0.5]);
-    % yticks(1:3); yticklabels({'S-S','M-M','S-M'});
-    % xticks(1:6); xticklabels({'Super-Super','Middle-Middle','Deep-Deep','Super-Mid','Mid-Deep','Super-Deep'});
 end
 
+figure;imagesc([rAllSuper(1,4) rAllMid(1,4) rAllDeep(1,4) corrSuperMid(1,4) corrMidDeep(1,4) corrSuperDeep(1,4);...
+    rAllSuper(2,4) rAllMid(2,4) rAllDeep(2,4) corrSuperMid(2,4) corrMidDeep(2,4) corrSuperDeep(2,4);...
+    rAllSuper(3,4) rAllMid(3,4) rAllDeep(3,4) corrSuperMid(3,4) corrMidDeep(3,4) corrSuperDeep(3,4)]);
+ colorbar; clim([0 0.5]);
+yticks(1:3); yticklabels({'S-S','M-M','S-M'});
+xticks(1:6); xticklabels({'Super-Super','Middle-Middle','Deep-Deep','Super-Mid','Mid-Deep','Super-Deep'});
+%%
+figure;
+for iVar = 1:3
+    subplot(1,3,iVar); 
+    imagesc([rAllSuper(iVar,4) corrSuperMid(iVar,4) corrSuperDeep(iVar,4); ...
+        corrSuperMid(iVar,4) rAllMid(iVar,4) corrMidDeep(iVar,4); ...
+        corrSuperDeep(iVar,4) corrMidDeep(iVar,4) rAllDeep(iVar,4)]); axis square; 
+    clim([0 0.65]); xticks(1:3); yticks(1:3); xticklabels({'S','M','D'});
+    yticklabels({'S','M','D'}); colorbar;
+end

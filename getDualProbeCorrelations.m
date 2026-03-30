@@ -13,17 +13,28 @@ gammaBand = [30 90]; [bG,aG] = butter(3,gammaBand./(fs/2),'bandpass');
 bandLabels = {'Theta', 'Alpha', 'Beta', 'Gamma','Spiking'};
 freqCombs = nchoosek(1:size(bandLabels,2),2);
 
+params.Fs     = fs;
+params.fpass  = [1 120];
+params.pad    = -1;
+params.tapers = [3 5];
+
+paramsRaw       = params;
+paramsRaw.fpass = [250 500];
+
 % Check if certain variables are stored....
 if exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.mat'],'file') 
     varInfo = who('-file',['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.mat']);
-    varIdx  = ismember('infraIntraAAllR',varInfo);
+    varIdx  = ismember('infraIntraAAllR',varInfo) & ismember('meanSpecValsAR',varInfo);
 else 
     varIdx = 1;
 end
+matSize   = size(connValsAll);
+meanSpecValsA = NaN(size(allDates,1),matSize(1),5,21);
+meanSpecValsB = NaN(size(allDates,1),matSize(1),5,21);
 
 % Calculate pairwise correlations between and within probes
 if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.mat'],'file') || ~varIdx
-    tic; % re-run for Whiskey... 
+   % re-run for Whiskey... 
     for iDate = 1: size(allDates,1)
         clear expDate datFileNum saveFolder
         expDate    = allDates(iDate,:);
@@ -34,7 +45,7 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.m
             clear probeA probeB chA chB
 
             clc; disp(['Processing data for ' monkeyName ': Date: ' allDates(iDate,:) ' ; File: ' num2str(fileNum)]);
-
+  tic;
             % Get the ephys data
             clear probeA probeB rawA rawB
             probeA = allProbeData{fileNum,iDate}.probe1Ch;
@@ -82,7 +93,50 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.m
                 medPairCorrFreqPower(1:size(freqCombs,2),iDate,iRun)= NaN;
                 medPairCorrFreqInfra(1:size(freqCombs,2),iDate,iRun)= NaN;
 
+                meanSpecValsA(iDate,iRun,1:5,1:21) = NaN;
+                meanSpecValsB(iDate,iRun,1:5,1:21) = NaN;
+                
                 continue;
+            end
+
+        
+            clear probeChACortex rawChACortex probeChBCortex rawChBCortex specB specA specBRaw specARaw
+            probeChACortex = probeA(:,chA(1):chA(2));
+            rawChACortex   = rawA(:,chA(1):chA(2));
+
+            probeChBCortex = probeA(:,chB(1):chB(2));
+            rawChBCortex   = rawA(:,chB(1):chB(2));
+
+            [specA,~,~] = mtspecgramc(probeChACortex,[5 2],params);
+            [specARaw,~,~] = mtspecgramc(rawChACortex,[5 2],paramsRaw);
+
+            [specB,~,freqValsSpec] = mtspecgramc(probeChBCortex,[5 2],params);
+            [specBRaw,~,freqValsSpecR] = mtspecgramc(rawChBCortex,[5 2],paramsRaw);
+
+            for iBand = 1:5
+                switch iBand
+                    case 1
+                        freqLim = freqValsSpec>= thetaBand(1) & freqValsSpec<=thetaBand(2);
+                        specValA = specA; specValB = specB;
+                    case 2
+                        freqLim = freqValsSpec>=alphaBand(1) & freqValsSpec<=alphaBand(2);
+                        specValA = specA; specValB = specB;
+                    case 3
+                        freqLim = freqValsSpec>=betaBand(1) & freqValsSpec<=betaBand(2);
+                        specValA = specA; specValB = specB;
+                    case 4
+                        freqLim = freqValsSpec>=gammaBand(1) & freqValsSpec<= gammaBand(2);
+                    case 5
+                        freqLim = freqValsSpecR>=250 & freqValsSpecR<= 500;
+                       specValA = specARaw; specValB = specBRaw;
+
+                end
+
+                meanSpecValsA(iDate,iRun,iBand,1:size(specValA,3)) = (squeeze(mean(specValA(:,freqLim,:),[1,2],'omitnan')));
+                % meanSpecValsA(iDate,iRun,iBand,1:size(specValA,3)) = (meanSpecValsA(iDate,iRun,iBand,1:size(specValA,3)))./max(meanSpecValsA(iDate,iRun,iBand,1:size(specValA,3)));
+
+                meanSpecValsB(iDate,iRun,iBand,1:size(specValB,3)) = (squeeze(mean(specValB(:,freqLim,:),[1,2],'omitnan')));
+                % meanSpecValsB(iDate,iRun,iBand,1:size(specValA,3)) = (meanSpecValsB(iDate,iRun,iBand,1:size(specValB,3)))./max(meanSpecValsB(iDate,iRun,iBand,1:size(specValB,3)));
             end
 
             % Get mean, median and maximum pairwise correlations for different
@@ -337,13 +391,13 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.m
                 end
 
             end
+              toc;
         end
     end
     
 
-    % Reshape variables for storage
+    % Reshape variables for storage -(date x recording)
     disp('Reshaping all variables to store as mat files...')
-    matSize   = size(connValsAll);
     connValsR = reshape(connValsAll',[matSize(1)*matSize(2) 1]);
     distValsR = reshape(distSitesAll',[matSize(1)*matSize(2) 1]);
 
@@ -412,6 +466,8 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.m
     medPairCorrFreqInfraIntraAR = reshape(medPairCorrFreqInfraIntraA,[size(medPairCorrFreqInfra,1) size(medPairCorrFreqInfra,2)*size(medPairCorrFreqInfra,3)]);
     medPairCorrFreqInfraIntraBR = reshape(medPairCorrFreqInfraIntraB,[size(medPairCorrFreqInfra,1) size(medPairCorrFreqInfra,2)*size(medPairCorrFreqInfra,3)]);
 
+    meanSpecValsAR = reshape(meanSpecValsA,[matSize(1)*matSize(2) 5 21]);
+    meanSpecValsBR = reshape(meanSpecValsB,[matSize(2)*matSize(2) 5 21]);
 
     nanVals       = (isnan(connValsR) | isnan(medPairCorrR(:,1)));
     lowCorrVals   = (medIntraCorrAR(:,4)<=0.2 | medIntraCorrBR(:,4)<=0.2);
@@ -480,9 +536,12 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.m
     medPairCorrFreqInfraR(:,removeDataIdx)       = [];
     medPairCorrFreqInfraIntraAR(:,removeDataIdx) = [];
     medPairCorrFreqInfraIntraBR(:,removeDataIdx) = [];
-    
-freqCombNames = {'Theta-Alpha','Theta-Beta','Theta-Gamma','Theta-Spiking',...
-    'Alpha-Beta','Alpha-Gamma','Alpha-Spiking','Beta-Gamma','Beta-Spiking','Gamma-Spiking'}; 
+
+    meanSpecValsAR(removeDataIdx,:,:) = [];
+    meanSpecValsBR(removeDataIdx,:,:) = [];
+
+    freqCombNames = {'Theta-Alpha','Theta-Beta','Theta-Gamma','Theta-Spiking',...
+        'Alpha-Beta','Alpha-Gamma','Alpha-Spiking','Beta-Gamma','Beta-Spiking','Gamma-Spiking'};
 
 
     save(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.mat'],'connValsR','distValsR',...
@@ -496,30 +555,29 @@ freqCombNames = {'Theta-Alpha','Theta-Beta','Theta-Gamma','Theta-Spiking',...
         'removeDataIdx','intraCorrAR','intraCorrBR','envelopeIntraAAllR','envelopeIntraBAllR','infraIntraAAllR','infraIntraBAllR',...
         'medPairCorrFreqTimeR','medPairCorrFreqTimeIntraAR','medPairCorrFreqTimeIntraBR','medPairCorrFreqPowerR',...
         'medPairCorrFreqPowerIntraAR','medPairCorrFreqPowerIntraBR','medPairCorrFreqInfraR','medPairCorrFreqInfraIntraAR',...
-        'medPairCorrFreqInfraIntraBR','freqCombNames','-append');
-toc;
+        'medPairCorrFreqInfraIntraBR','meanSpecValsAR','meanSpecValsBR','freqCombNames','-append');
+  
 
-else
-    disp('Loading saved variables...')
-    clear allVars
-    allVars = load(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.mat']);
-    fieldNames = fieldnames(allVars);
+end
 
-    % Check if bad runs are completely removed from the processed data
-    goodRunsR = reshape(goodRuns',[numel(goodRuns) 1]);
+disp('Loading saved variables...')
+clear allVars
+allVars = load(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.mat']);
+fieldNames = fieldnames(allVars);
 
-    % Remove recordings with a single channel
-    singleChRow = cellfun(@(x) isscalar(x),allVars.intraCorrBR(:,1));
+% Check if bad runs are completely removed from the processed data
+goodRunsR = reshape(goodRuns',[numel(goodRuns) 1]);
 
-    goodRunsR(isnan(goodRunsR)) = 0;
-    goodRunsR(allVars.removeDataIdx,:)  = [];
+% Remove recordings with a single channel
+singleChRow = cellfun(@(x) isscalar(x),allVars.intraCorrBR(:,1));
 
-    for iL = 1:length(fieldNames)
-        if ~(contains(fieldNames{iL},'Super') || contains(fieldNames{iL},'Mid') || contains(fieldNames{iL},'Deep'))
-            allVars.(fieldNames{iL})(~goodRunsR,:) = [];
-        else
-            allVars.(fieldNames{iL})(~goodRunsR|singleChRow,:) = [];
-        end
+goodRunsR(isnan(goodRunsR)) = 0;
+goodRunsR(allVars.removeDataIdx,:)  = [];
+
+for iL = 1:length(fieldNames)
+    if ~(contains(fieldNames{iL},'Super') || contains(fieldNames{iL},'Mid') || contains(fieldNames{iL},'Deep'))
+        allVars.(fieldNames{iL})(~goodRunsR,:) = [];
+    else
+        allVars.(fieldNames{iL})(~goodRunsR|singleChRow,:) = [];
     end
-
 end

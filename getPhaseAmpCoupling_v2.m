@@ -20,7 +20,6 @@ phaseVal   = rad2deg(phaseVal);
 
 modIdx   = NaN(nWin,nHigh,nLow,nChan,'single'); % Initialization
 
-
 % Progress tracking - Uncomment the code below if you want to track code
 % progress within parfor loop
 % D = parallel.pool.DataQueue;

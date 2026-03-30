@@ -46,14 +46,6 @@ switch iM
             1 1 1 1 1 1 1 1 1 NaN NaN NaN NaN NaN NaN NaN; ...
             1 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1]';
 
-         % singleChFlag = [0 0 0 0 0 0 0 0 0 0 0 NaN NaN NaN NaN NaN; ...
-         %    NaN NaN NaN NaN 0 0 0 0 0 0 NaN NaN NaN NaN NaN NaN; ...
-         %    NaN NaN NaN NaN 0 0 NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN; ...
-         %    0 0 0 0 0 0 0 0 0 0 0 0 NaN NaN NaN NaN; ...
-         %    0 0 0 0 0 0 0 0 0 NaN NaN NaN NaN NaN NaN NaN; ...
-         %    0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]';
-
-
     case 2
         monkeyName = 'Whiskey';
         goodRuns = [1 1 1 1 NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN; ...
@@ -63,14 +55,6 @@ switch iM
             1 1 1 1 1 1 1 1 1 0 1 1 1 1 1 NaN; ...
             1 1 1 1 1 1 1 1 1 1 1 NaN NaN NaN NaN NaN;...
             1 1 1 1 1 1 1 1 1 1 1 1 1 1 NaN NaN]';
-
-        % singleChFlag = [1 1 1 1 NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN; ...
-        %     0 0 0 0 0 0 0 0 0 0 0 NaN NaN NaN NaN NaN; ...
-        %     0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 NaN; ...
-        %     0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0; ...
-        %     0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 NaN; ...
-        %     0 0 0 0 0 0 0 0 0 0 0 NaN NaN NaN NaN NaN;...
-        %     0 0 0 0 0 0 0 0 0 0 0 0 0 0 NaN NaN]';
 end
 
 % Load all necessary variables
@@ -127,25 +111,40 @@ clear locs;
 for iDate = 1:size(allDates,1)
     datFileNum = datFileNumAll{iDate,1};
     for iRun = 1:length(datFileNum)
-        fileNum = datFileNum(iRun);
-        siteProbeA{fileNum,iDate} = corticalAreaProbeA{iDate}{fileNum};
-        siteProbeB{fileNum,iDate} = corticalAreaProbeB{iDate}{fileNum};
-
+        % fileNum = datFileNum(iRun);
+        % siteProbeA{fileNum,iDate} = corticalAreaProbeA{iDate}{fileNum};
+        % siteProbeB{fileNum,iDate} = corticalAreaProbeB{iDate}{fileNum};
+        % locs.probeALoc(fileNum,iDate) = corticalAreaProbeA{iDate}{fileNum};
+        % locs.probeBLoc(fileNum,iDate) = corticalAreaProbeB{iDate}{fileNum};
+     locs{fileNum,iDate}  = {corticalAreaProbeA{iDate}{fileNum} corticalAreaProbeB{iDate}{fileNum} };
         % Termination in 3b (1-->3b, 2-->3b)
         if strcmp(corticalAreaProbeA{iDate}(fileNum),'3b') || strcmp(corticalAreaProbeB{iDate}(fileNum),'3b')
-            termination3b(fileNum,iDate) = 1;
-            locs{fileNum,iDate}  = {corticalAreaProbeA{iDate}{fileNum} corticalAreaProbeB{iDate}{fileNum} };
+            
             if strcmp(corticalAreaProbeA{iDate}(fileNum),'3b')
                 if strcmp(corticalAreaProbeB{iDate}(fileNum),'1') || strcmp(corticalAreaProbeB{iDate}(fileNum),'2') || strcmp(corticalAreaProbeB{iDate}(fileNum),'3a')
                     s1Pairs(fileNum,iDate) = true; 
-                else%if strcmp(corticalAreaProbeB{iDate}(fileNum),'4') || strcmp(corticalAreaProbeB{iDate}(fileNum),'6')
+                    termination3b(fileNum,iDate) = 1;
+                elseif strcmp(corticalAreaProbeB{iDate}(fileNum),'4') || strcmp(corticalAreaProbeB{iDate}(fileNum),'6')
                     motorPairs(fileNum,iDate) = true; 
                 end
+
             else
                 if strcmp(corticalAreaProbeA{iDate}(fileNum),'1') || strcmp(corticalAreaProbeA{iDate}(fileNum),'2')|| strcmp(corticalAreaProbeA{iDate}(fileNum),'3a')
                     s1Pairs(fileNum,iDate) = true; 
-                else%if strcmp(corticalAreaProbeA{iDate}(fileNum),'4') || strcmp(corticalAreaProbeA{iDate}(fileNum),'6')
+                    termination3b(fileNum,iDate) = 1;
+                elseif strcmp(corticalAreaProbeA{iDate}(fileNum),'4') || strcmp(corticalAreaProbeA{iDate}(fileNum),'6')
                     motorPairs(fileNum,iDate) = true; 
+                end
+            end
+
+        elseif strcmp(corticalAreaProbeA{iDate}(fileNum),'4') || strcmp(corticalAreaProbeB{iDate}(fileNum),'4')
+            if strcmp(corticalAreaProbeA{iDate}(fileNum),'4')
+                if strcmp(corticalAreaProbeB{iDate}(fileNum),'6') 
+                    motorAllPairs(fileNum,iDate) = true; 
+                end
+            else
+                 if strcmp(corticalAreaProbeA{iDate}(fileNum),'6') 
+                    motorAllPairs(fileNum,iDate) = true; 
                 end
             end
         end
@@ -446,11 +445,12 @@ stepSize = 10e3;
 chSplit = 6;
 
 % Get the phase amplitude coupling for the recordings...
-for iDate = 2:size(allDates,1)
+for iDate = 1:size(allDates,1)
     clear expDate datFileNum saveFolder
     expDate    = allDates(iDate,:);
     datFileNum = datFileNumAll{iDate,1};
-
+    
+    if strcmp(monkeyName,'Whiskey') && iDate == 1; continue; end
     for iRun = 1:length(datFileNum)
 
         fileNum = datFileNum(iRun);
@@ -512,7 +512,7 @@ stepSize = 10e3;
 % shiftLen = [1 5 10 20 50 100].*1e3;
 % nShift   = length(shiftLen);
 
-for iDate = 2:size(allDates,1)
+for iDate = 1:size(allDates,1)
     expDate    = allDates(iDate,:);
     datFileNum = datFileNumAll{iDate,1};
 
