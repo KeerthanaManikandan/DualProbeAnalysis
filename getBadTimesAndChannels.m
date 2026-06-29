@@ -41,12 +41,6 @@ for iDate = 1:size(allDates,1) % All experiments
         probe1 = single(allProbeData{fileNum,iDate}.probe1Ch);
         probe2 = single(allProbeData{fileNum,iDate}.probe2Ch);
 
-        if iDate>=6 %
-            [bL,aL] = butter(3,([6 250]./(fs/2)),'bandpass');
-            probe1 = single(filtfilt(bL,aL,double(probe1)));
-            probe2 = single(filtfilt(bL,aL,double(probe2)));
-        end
-
         disp(['Preprocessing: ' num2str(expDate) ' File: ' num2str(fileNum)]);
 
         [~,timeValsSpec1,~] = mtspecgramc(probe1,[5 2],params); % Checking spectrogram for bad recording/run 

@@ -16,6 +16,7 @@ addpath(genpath([commonDir '\Codes\Imaging']));
 addpath(genpath([commonDir '\Codes\chronux_2_12']));
 rmpath(genpath([commonDir '\Codes\chronux_2_12\fly_track\videoIO']));
 rmpath(genpath([commonDir '\Codes\chronux_2_12\spectral_analysis\continuous\dupes']));
+rmpath(genpath([commonDir '\Codes\ISOI_Ephys']));
 clc;
 
 %% Initialize all relevant variables
@@ -92,6 +93,38 @@ disp(['Obtained/retrieved distance between probes, connectivity values, heart ra
 [allProbeData,allBadTimes,badElecA,badElecB,estChInCortexA,estChInCortexB] = getAllDualProbeData(monkeyName,hemisphere,allDates, ...
     datFileNameAll, datFileNumAll,serverPath,chInCortexProbeA,chInCortexProbeB,probeLabelA,probeLabelB,saveFigureFlag);
 
+%% Save bad channels, bad times in LFP mat file
+% for iDate = 1: size(allDates,1)
+%     clear expDate
+%     expDate = allDates(iDate,:);
+%     saveFolder = ['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\Processed Data'];
+% 
+%     for iRun = 1:length(datFileNumAll{iDate,1})
+%         clear fileNum zL pL kL
+%         fileNum = datFileNumAll{iDate,1}(iRun);  
+% 
+%         % Get the name of stored file
+%         if strcmp(expDate,'11_01_2021') && (fileNum == 1 || fileNum == 2) % Only for Charlie Sheen
+%             datFileName = 'datafile_000';
+%         else
+%             datFileName = datFileNameAll{iDate,1};
+%         end
+% 
+%         if (fileNum>=10)
+%             datFileName = datFileName(1:end-1);
+%         end
+% 
+%         badElecA = badElecAall{fileNum,iDate};
+%         badElecB = badElecBall{fileNum,iDate};
+%         chCortexA = estChInCortexA{iDate}(fileNum,:);
+%         chCortexB = estChInCortexB{iDate}(fileNum,:);
+%         badTimes = allBadTimes{fileNum,iDate};
+% 
+%         save([saveFolder '\' datFileName num2str(fileNum) '_lfp.mat'] ,'badElecA','badElecB',...
+%             'chCortexA','chCortexB','badTimes','-append');
+%     end
+% end
+
 %% Get all pairwise correlations
 bandLabels = {'Theta', 'Alpha', 'Beta', 'Gamma','Spiking'};
 timeLabels = {'Time series','Power','Infraslow'};
@@ -102,7 +135,7 @@ timeLabels = {'Time series','Power','Infraslow'};
 
 dateVal = 3; runVal = 5:8; 
 withinA = NaN(31,31,4,'single');
-withinB = NaN(31,31,4,'single');
+withinB = NaN(30,30,4,'single');
 
 for iRun = 1:4
     
@@ -135,22 +168,33 @@ for iRun = 1:4
 end
 
 withinAT = reshape(withinA,[31*31*4 1]); 
-withinBT = reshape(withinB,[31*31*4 1]); 
-withinAB = reshape(mean([withinAT withinBT],2,'omitnan'),[31 31 4]); 
+withinBT = reshape(withinB,[30*30*4 1]); 
+% withinAB = reshape(mean([withinAT withinBT],2,'omitnan'),[31 31 4]); 
 
 
-%
+%%
 titleLabel = {'1.2%','2.25%','3.25%', '1%' };
 figure; 
 for iFig = 1:4
-    subplot(2,4,iFig); 
+    subplot(3,4,iFig); 
     imagesc(imgaussfilt(squeeze(btwAB(:,:,iFig)))); colormap parula; clim([0 0.7]); colorbar; 
     shading interp; axis square;
     title(['Btw probe: ' titleLabel{iFig}]); 
 
-     subplot(2,4,iFig+4);
-    imagesc(imgaussfilt(squeeze(withinA(:,:,iFig)))); colormap parula; clim([0 0.7]); colorbar;
-    shading interp; axis square;
+     subplot(3,4,iFig+4);
+    imagesc(tril(imgaussfilt(squeeze(withinA(:,:,iFig))))); colormap parula; clim([0 0.7]); colorbar;
+    shading interp; axis square; xticks(0:5:30); yticks(0:5:30);
+    title(['Wthn probe: ' titleLabel{iFig}]);
+
+    subplot(3,4,iFig+8);
+    if iFig~=1
+        x1 = smoothdata2(tril(squeeze(withinB(:,:,iFig)),-1));
+        x1(logical(eye(length(x1)))) = 1;
+    else
+        x1 = imgaussfilt(squeeze(withinB(:,:,iFig)));
+    end
+    imagesc(tril(x1)); colormap parula; clim([0 0.7]); colorbar;
+    shading interp; axis square;xticks(0:5:30); yticks(0:5:30);
     title(['Wthn probe: ' titleLabel{iFig}]);
 end
 
@@ -165,6 +209,7 @@ params.fpass  = [6 120];
 params.tapers = [2 3];
 psdA     = cellfun(@(x) NaN(119538,32,'single'), cell(maxDates,maxRuns), 'UniformOutput', false);
 psdB =  cellfun(@(x) NaN(119538,32,'single'), cell(maxDates,maxRuns), 'UniformOutput', false);
+
 tic;
 for iDate = 1: size(allDates,1)
     clear expDate datFileNum saveFolder
@@ -492,11 +537,13 @@ connValsR(allVars.removeDataIdx) = [];
 distValsR = distSitesAll';
 distValsR = reshape(distValsR,[maxRuns*maxDates 1]);
 distValsR(allVars.removeDataIdx) = [];
+
 %%
 cohNew  = cat(3,allCohBand,cohBandCS);
 cErrNew = cat(4,allCerrBand,CerrBandCS);
 connAll = [connValsR; connValsCS];
 distAll = [distValsR; distValsCS];
+
 %%
 figure;
 for iBand = 1:4  

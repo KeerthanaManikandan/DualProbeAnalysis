@@ -122,6 +122,7 @@ subplot(122); histogram(distVals,0:2:16); xlabel('Distance (mm)'); box off;ylim(
 meanSpecA = cat(1,allMonkeyVars(:).meanSpecValsAR); meanSpecA = meanSpecA./max(meanSpecA,[],3);
 meanSpecB = cat(1,allMonkeyVars(:).meanSpecValsBR);meanSpecB = meanSpecB./max(meanSpecB,[],3);
 meanSpecAll = (meanSpecA+meanSpecB)./2;
+
 idx =1;
 figure;
 for iElec = 1:2
@@ -268,6 +269,21 @@ for iBand = 1:4
     title(bandLabels{iBand}); xlabel('Distance (mm)');
     ylabel('Coherence');
 end
+
+    y = zscore(connAll);
+    X  = zscore(cohValsFreq);
+    clear  beta sigma eVal covMat
+
+    % Get the linear model 
+    mdlAll = fitlm(X,y,'VarNames',{'Theta','Alpha','Beta','Gamma','FC'});
+    
+    % Relative weights analysis to determine contributions of predictors
+    [relImp, r2] = rwa(X,y,bandLabels');
+
+    % Dominance analysis
+    [relativeImportance,rsqDominance] = dominance(X,y);
+    percentImportance = 100*relativeImportance./rsqDominance;
+
 
 %% Coherence 
 allCohVals    = [allMonkeyVars.allCohVals];
@@ -755,6 +771,7 @@ for iM = 1:3
     idxMI = tiedrank(medMIBtw);
     idxMI = minVal + ((idxMI-1)*(maxVal-minVal)/(length(idxMI)-1));
 
+
 %%
     % lowGammaRank = (tiedrank(lowGammaThetaBtw)-0.5./(rowNum));
     % % % lowGammaRank = minVal + ((lowGammaRank-1)*(maxVal-minVal)/(length(lowGammaRank)-1));
@@ -770,11 +787,16 @@ for iM = 1:3
     highGammaRank = (highGammaThetaBtw-min(highGammaThetaBtw))./(max(highGammaThetaBtw)-min(highGammaThetaBtw))* (1 - 2*epsilon) + epsilon;
     ctrlRank      = (ctrlMIBtw-min(ctrlMIBtw))./(max(ctrlMIBtw)-min(ctrlMIBtw))* (1 - 2*epsilon) + epsilon;
     connValsRank = (connValsR-min(connValsR))./(max(connValsR)-min(connValsR))* (1 - 2*epsilon) + epsilon;
-    
+    distValsRank = (distValsR-min(distValsR))./(max(distValsR)-min(distValsR))* (1-2*epsilon) + epsilon;
 %%
     figure;subplot(131);showLinearFit(connValsRank,lowGammaRank); axis square; title('Theta-low gamma');
     subplot(132); showLinearFit(connValsRank,highGammaRank); axis square; title('Theta-high gamma');
     subplot(133); showLinearFit(connValsRank,ctrlRank); axis square; title('Control');
+
+    %%
+    figure;subplot(131);showLinearFit(distValsRank,lowGammaRank); axis square; title('Theta-low gamma');
+    subplot(132); showLinearFit(distValsRank,highGammaRank); axis square; title('Theta-high gamma');
+    subplot(133); showLinearFit(distValsRank,ctrlRank); axis square; title('Control');
 
     
     %%

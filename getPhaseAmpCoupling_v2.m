@@ -42,27 +42,29 @@ modIdx   = NaN(nWin,nHigh,nLow,nChan,'single'); % Initialization
 %     end
 
 parfor iWin = 1:nWin 
+    amplitudeTemp = squeeze(amplitudeVal(:,winStart(iWin):winEnd(iWin),ampIdx));  % Obtain amplitude
+    phaseTemp     = squeeze(phaseVal(:,winStart(iWin):winEnd(iWin),phaseIdx)); % Obtain phase %#ok<*PFBNS>
 
-    amplitudeTemp = squeeze(amplitudeVal(:,winStart(iWin):winEnd(iWin),ampIdx)); 
-    phaseTemp     = squeeze(phaseVal(:,winStart(iWin):winEnd(iWin),phaseIdx)); %#ok<*PFBNS>
-
-    [~,~,binTemp]     = histcounts(phaseTemp,'BinEdges',binEdges); binTemp = single(binTemp);
+    [~,~,binTemp]     = histcounts(phaseTemp,'BinEdges',binEdges); binTemp = single(binTemp); % Obtain histogram 
 
     modIdxTemp    = NaN(nHigh, nLow, nChan, 'single'); 
    
     for iHigh = 1:nHigh
-        % Get the amplitude for iHigh 
+        % Get the amplitude for high frequency
         ampTempHigh      = squeeze(amplitudeTemp(iHigh,:,:));
         amplitudeCol = ampTempHigh(:);     
 
         for iLow = 1:nLow
-            % Get the phase for iLow frequency pairs
+            % Get the phase for low frequency 
             binTempLow = squeeze(binTemp(iLow,:,:));
             binTempCol = binTempLow(:);         
             
             pj = accumarray([binTempCol, groupIdx], amplitudeCol, [], @mean);
             pj = pj./sum(pj,1,'omitnan'); % The sum should be equal to 1
-            modIdxTemp(iHigh, iLow, :)  = (logN-(-sum(pj.*log(pj))))./logN;
+
+            % Calculate the KL divergence between amplitude of high
+            % frequency and the phase of low frequency
+            modIdxTemp(iHigh, iLow, :)  = (logN-(-sum(pj.*log(pj))))./logN; 
         end
     end
 

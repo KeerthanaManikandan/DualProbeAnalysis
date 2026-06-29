@@ -145,6 +145,7 @@ for iType = 1:3
     [relativeImportance(:,iType),rsqDominance(iType)] = dominance(X,y);
     percentImportance(:,iType) = 100*relativeImportance(:,iType)./rsqDominance(iType);
 end
+
 %%
 singleChRow = cellfun(@(x) isscalar(x),allMonkeyVars(2).intraCorrBR(:,1));
 
@@ -386,7 +387,24 @@ for iBand = 1:5
     title(bandLabels{iBand}); ylim([-0.2 1]); box off; 
 
 end
+%% 
+clear corrSuperMid corrMidDeep corrSuperDeep laminarCorr
+pairClass = [allMonkeyVars(1).pairClass; allMonkeyVars(2).pairClass];
+pairClass(find(singleChRow)+42,:) =[];
 
+smLoc = sum(pairClass=='SM',2)==2;
+ssLoc = sum(pairClass=='SS',2)==2;
+mmLoc = sum(pairClass=='MM',2)==2;
+
+% Plot interaction between gamma and site identity
+allVals = [[superAllCorr; superMidPairPow; superDeepPairPow]; ...
+        [midAllCorr; superMidPairPow; midDeepPairPow];...
+        [deepAllCorr ; superDeepPairPow; midDeepPairPow]];
+
+figure;violin([allVals(repmat(ssLoc,[9 1]),4) [NaN(27,1); allVals(repmat(mmLoc,[9 1]),4)] ...
+    [NaN(54,1); allVals(repmat(smLoc,[9 1]),4)]],{'S1-S1','Motor-Motor','S1-Motor'},'bw',0.035,'edgecolor','none');
+box off; ylim([-0.1 1]);
+title('Interaction - frequency x site pair identity');
 %% Inter and intra-area correlations
 figure;
 medEnvNew = medEnvelopeCorr(:,4);
@@ -465,24 +483,7 @@ figure;violin([[superAllCorr(:,[2 4]); superMidPairPow(:,[2 4]); superDeepPairPo
         [deepAllCorr(:,[2 4]) ; superDeepPairPow(:,[2 4]); midDeepPairPow(:,[2 4])]],...
         'xlabel', {'S-Alpha','S-Gamma','M-Alpha','M-Gamma','D-Alpha','D-Gamma'},'bw',0.025,'edgecolor','none');
 ylim([-0.1 1]); box off; 
-%% 
-clear corrSuperMid corrMidDeep corrSuperDeep laminarCorr
-pairClass = [allMonkeyVars(1).pairClass; allMonkeyVars(2).pairClass];
-pairClass(find(singleChRow)+42,:) =[];
 
-smLoc = sum(pairClass=='SM',2)==2;
-ssLoc = sum(pairClass=='SS',2)==2;
-mmLoc = sum(pairClass=='MM',2)==2;
-
-% Plot interaction between gamma and site identity
-allVals = [[superAllCorr; superMidPairPow; superDeepPairPow]; ...
-        [midAllCorr; superMidPairPow; midDeepPairPow];...
-        [deepAllCorr ; superDeepPairPow; midDeepPairPow]];
-
-figure;violin([allVals(repmat(ssLoc,[9 1]),4) [NaN(27,1); allVals(repmat(mmLoc,[9 1]),4)] ...
-    [NaN(54,1); allVals(repmat(smLoc,[9 1]),4)]],{'S1-S1','Motor-Motor','S1-Motor'},'bw',0.035,'edgecolor','none');
-box off; ylim([-0.1 1]);
-title('Interaction - frequency x site pair identity');
 
 %%
 for iVal = 1:3

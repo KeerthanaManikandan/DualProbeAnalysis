@@ -28,6 +28,7 @@ if exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.ma
 else 
     varIdx = 1;
 end
+
 matSize   = size(connValsAll);
 meanSpecValsA = NaN(size(allDates,1),matSize(1),5,21);
 meanSpecValsB = NaN(size(allDates,1),matSize(1),5,21);
@@ -45,7 +46,8 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.m
             clear probeA probeB chA chB
 
             clc; disp(['Processing data for ' monkeyName ': Date: ' allDates(iDate,:) ' ; File: ' num2str(fileNum)]);
-  tic;
+            
+            tic;
             % Get the ephys data
             clear probeA probeB rawA rawB
             probeA = allProbeData{fileNum,iDate}.probe1Ch;
@@ -99,14 +101,15 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.m
                 continue;
             end
 
-        
+            % Get LFP and MUA for channels within cortex
             clear probeChACortex rawChACortex probeChBCortex rawChBCortex specB specA specBRaw specARaw
             probeChACortex = probeA(:,chA(1):chA(2));
             rawChACortex   = rawA(:,chA(1):chA(2));
 
             probeChBCortex = probeA(:,chB(1):chB(2));
             rawChBCortex   = rawA(:,chB(1):chB(2));
-
+            
+            % Calculate spectrograms
             [specA,~,~] = mtspecgramc(probeChACortex,[5 2],params);
             [specARaw,~,~] = mtspecgramc(rawChACortex,[5 2],paramsRaw);
 
@@ -115,28 +118,25 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.m
 
             for iBand = 1:5
                 switch iBand
-                    case 1
+                    case 1 % Theta
                         freqLim = freqValsSpec>= thetaBand(1) & freqValsSpec<=thetaBand(2);
                         specValA = specA; specValB = specB;
-                    case 2
+                    case 2 % Alpha
                         freqLim = freqValsSpec>=alphaBand(1) & freqValsSpec<=alphaBand(2);
                         specValA = specA; specValB = specB;
-                    case 3
+                    case 3 % Beta
                         freqLim = freqValsSpec>=betaBand(1) & freqValsSpec<=betaBand(2);
                         specValA = specA; specValB = specB;
-                    case 4
+                    case 4 % Gamma
                         freqLim = freqValsSpec>=gammaBand(1) & freqValsSpec<= gammaBand(2);
-                    case 5
+                    case 5 % Spiking 
                         freqLim = freqValsSpecR>=250 & freqValsSpecR<= 500;
                        specValA = specARaw; specValB = specBRaw;
 
                 end
-
+                % Get the average power within a frequency from spectrogram
                 meanSpecValsA(iDate,iRun,iBand,1:size(specValA,3)) = (squeeze(mean(specValA(:,freqLim,:),[1,2],'omitnan')));
-                % meanSpecValsA(iDate,iRun,iBand,1:size(specValA,3)) = (meanSpecValsA(iDate,iRun,iBand,1:size(specValA,3)))./max(meanSpecValsA(iDate,iRun,iBand,1:size(specValA,3)));
-
                 meanSpecValsB(iDate,iRun,iBand,1:size(specValB,3)) = (squeeze(mean(specValB(:,freqLim,:),[1,2],'omitnan')));
-                % meanSpecValsB(iDate,iRun,iBand,1:size(specValA,3)) = (meanSpecValsB(iDate,iRun,iBand,1:size(specValB,3)))./max(meanSpecValsB(iDate,iRun,iBand,1:size(specValB,3)));
             end
 
             % Get mean, median and maximum pairwise correlations for different
@@ -148,7 +148,7 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.m
                 if (strcmp(expDate,'10_10_2022') && (fileNum == 1 || fileNum == 6 ))||...
                         (strcmp(expDate,'02_07_2023') && (fileNum == 2 ))... %||(strcmp(expDate,'11_01_2021') && (fileNum == 11 ))...
                         ||(strcmp(expDate,'09_19_2022') && (fileNum == 4)) || (isempty(probeA) && isempty(probeB))...
-                        || (strcmp(expDate,'04_11_2023') && (fileNum == 10))% Datafile 4 from 09/19/2022 - why -  (strcmp(expDate,'09_19_2022') && fileNum == 4) ||
+                        || (strcmp(expDate,'04_11_2023') && (fileNum == 10))
 
                     meanPairCorr(iDate,iRun,iBand)   = NaN; maxPairCorr(iDate,iRun,iBand)    = NaN; medPairCorr(iDate,iRun,iBand)  = NaN;
                     meanIntraCorrA(iDate,iRun,iBand) = NaN; meanIntraCorrB(iDate,iRun,iBand) = NaN;
@@ -192,31 +192,31 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.m
                         xB = rawB(:,chB(1):chB(2));
                 end
 
-                % Get the intra probe correlations for channels inside the
+                % Get the within probe correlations for channels inside the
                 % cortex...
                 medIntraCorrA(iDate,iRun,iBand)  = median(nonzeros(tril(corr(xA,'rows','complete'))),'all','omitnan');
                 medIntraCorrB(iDate,iRun,iBand)  = median(nonzeros(tril(corr(xB,'rows','complete'))),'all','omitnan');
                
-                intraCorrA{iDate,iRun,iBand} = single(tril(corr(xA,'rows','complete')));
-                intraCorrB{iDate,iRun,iBand} = single(tril(corr(xB,'rows','complete')));
+                intraCorrA{iDate,iRun,iBand} = single(tril(corr(xA,'rows','complete'))); % Electrode A
+                intraCorrB{iDate,iRun,iBand} = single(tril(corr(xB,'rows','complete'))); % Electrode B
 
                 % Get pairwise correlations between the two probes...
-                maxPairCorr(iDate,iRun,iBand)  = max(corr(xA,xB),[],'all','omitnan');
-                meanPairCorr(iDate,iRun,iBand) = mean(corr(xA,xB),'all','omitnan');
-                medPairCorr(iDate,iRun,iBand)  = median(corr(xA,xB),'all','omitnan');%
+                maxPairCorr(iDate,iRun,iBand)  = max(corr(xA,xB),[],'all','omitnan'); % Maximum pairwise correlation
+                meanPairCorr(iDate,iRun,iBand) = mean(corr(xA,xB),'all','omitnan'); % Mean pairwise correlation
+                medPairCorr(iDate,iRun,iBand)  = median(corr(xA,xB),'all','omitnan'); % Median pairwise correlation
 
                 % Get instantaneous power and correlate the powers
                 envelopeABandLimited = envelope(abs(xA),5);
                 envelopeBBandLimited = envelope(abs(xB),5);
 
-                % Within probe correlations - Envelope
+                % Within probe correlations - Envelope/Power
                 envelopeIntraCorrA(iDate,iRun,iBand)  = median(nonzeros(tril(corr(envelopeABandLimited,envelopeABandLimited))),'all','omitnan');
                 envelopeIntraCorrB(iDate,iRun,iBand)  = median(nonzeros(tril(corr(envelopeBBandLimited,envelopeBBandLimited))),'all','omitnan');
 
                 envelopeIntraAAll{iDate,iRun,iBand} =  single(tril(corr(envelopeABandLimited,'rows','complete')));
                 envelopeIntraBAll{iDate,iRun,iBand} =  single(tril(corr(envelopeBBandLimited,'rows','complete')));
 
-                % Correlate instantaneous band power
+                % Correlate instantaneous band power between electrodes
                 medCorrEnvelope(iDate,iRun,iBand)  =  median(corr(envelopeABandLimited,envelopeBBandLimited),'all','omitnan');
 
                 enSizeA = size(envelopeABandLimited);
@@ -238,23 +238,26 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.m
                 infraIntraAAll{iDate,iRun,iBand} =  single(tril(corr(infraSlowA,'rows','complete')));
                 infraIntraBAll{iDate,iRun,iBand} =  single(tril(corr(infraSlowB,'rows','complete')));
 
-                % Correlate infraslow flucutuations in instantaneous band power
+                % Correlate infraslow flucutuations in instantaneous band
+                % power between electrodes
                 medCorrInfraSlow(iDate,iRun,iBand)  =  median(corr(infraSlowA,infraSlowB),'all','omitnan');
 
 
-                % Split the data into superficial, middle or deep for both channels
+                % Split the data into superficial, middle or deep for both
+                % electrodes
                 chSplit = 6;
+
                 % Electrode A
                 if chA(2)-chA(1)== 0 % Single channel
-                    timeASuper = xA;
+                    timeASuper = xA; % Time series
                     timeAMid   = xA;
                     timeADeep  = xA;
 
-                    envelopeASuper = envelopeABandLimited;
+                    envelopeASuper = envelopeABandLimited; % Envelope
                     envelopeAMid   = envelopeABandLimited;
                     envelopeADeep  = envelopeABandLimited;
 
-                    infraASuper = infraSlowA;
+                    infraASuper = infraSlowA; % Infra-slow power
                     infraAMid   = infraSlowA;
                     infraADeep  = infraSlowA;
                 else
@@ -285,6 +288,7 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.m
                     infraBSuper = infraSlowB;
                     infraBMid   = infraSlowB;
                     infraBDeep  = infraSlowB;
+
                 else
                     timeBSuper = xB(:,1:chSplit);%
                     timeBMid   = xB(:,(chSplit+1: chSplit*2));%
@@ -299,7 +303,8 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.m
                     infraBDeep  = infraSlowB(:,2*chSplit+1:end);%
                 end
 
-                % Correlate within compartments
+                % Correlate between the same compartments between the
+                % electrodes
                 medPairCorrSuper(iDate,iRun,iBand) = median(corr(timeASuper,timeBSuper,'rows','complete'),'all','omitnan');
                 medPairCorrMid(iDate,iRun,iBand)   = median(corr(timeAMid,timeBMid,'rows','complete'),'all','omitnan');
                 medPairCorrDeep(iDate,iRun,iBand)  = median(corr(timeADeep,timeBDeep,'rows','complete'),'all','omitnan');
@@ -312,7 +317,7 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.m
                 infraPairCorrMid(iDate,iRun,iBand)   = median(corr(infraAMid,infraBMid,'rows','complete'),'all','omitnan');
                 infraPairCorrDeep(iDate,iRun,iBand)  = median(corr(infraADeep,infraBDeep,'rows','complete'),'all','omitnan');
 
-                % Correlate between compartments between probes
+                % Correlate between compartments between the electrodes
                 medPairASuperBMid(iDate,iRun,iBand)  = median(corr(timeASuper,timeBMid,'rows','complete'),'all','omitnan');
                 medPairASuperBDeep(iDate,iRun,iBand) = median(corr(timeASuper,timeBDeep,'rows','complete'),'all','omitnan');
                 medPairAMidBSuper(iDate,iRun,iBand)  = median(corr(timeAMid,timeBSuper,'rows','complete'),'all','omitnan');
@@ -337,7 +342,7 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.m
                 % Get cross-frequency correlations
                 for iComb = 1:size(freqCombs,1)
                     clear combVals pAFreq pBFreq envelopeABand envelopeBBand
-                    combVals = freqCombs(iComb,:);
+                    combVals = freqCombs(iComb,:); % Get all frequency pairs
 
                     for iPair = 1:length(combVals)
                         switch combVals(iPair)
@@ -471,7 +476,7 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.m
 
     nanVals       = (isnan(connValsR) | isnan(medPairCorrR(:,1)));
     lowCorrVals   = (medIntraCorrAR(:,4)<=0.2 | medIntraCorrBR(:,4)<=0.2);
-    removeDataIdx = nanVals | lowCorrVals;
+    removeDataIdx = nanVals | lowCorrVals; % Remove bad recordings
 
     connValsR(removeDataIdx)             = [];
     distValsR(removeDataIdx)             = [];
@@ -543,7 +548,7 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.m
     freqCombNames = {'Theta-Alpha','Theta-Beta','Theta-Gamma','Theta-Spiking',...
         'Alpha-Beta','Alpha-Gamma','Alpha-Spiking','Beta-Gamma','Beta-Spiking','Gamma-Spiking'};
 
-
+% Save variables
     save(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.mat'],'connValsR','distValsR',...
         'medPairCorrR','medCorrEnvelopeR','medCorrInfraSlowR','medIntraCorrAR','medIntraCorrBR','envelopeIntraCorrAR',...
         'envelopeIntraCorrBR','infraIntraCorrAR','infraIntraCorrBR','medPairCorrSuperR','medPairCorrMidR',...
