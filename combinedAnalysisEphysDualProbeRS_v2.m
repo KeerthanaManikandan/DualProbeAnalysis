@@ -170,19 +170,7 @@ for iBand = 1:5
     xlabel('Power (au)'); ylabel('Channels');
 end
 
-%% Split into superficial, middle,deep
-figure;
-for iBand = 1:5
-    subplot(2,3,iBand); 
-    
-      yData = [median(squeeze(meanSpecAll(:,iBand,1:6)),2,'omitnan')...
-        median(squeeze(meanSpecAll(:,iBand,7:12)),2,'omitnan') ...
-        median(squeeze(meanSpecAll(:,iBand,13:end)),2,'omitnan')];
-    boxplot(yData);ylabel('Power (a.u)')
-    
-    title(bandLabels{iBand}); ylim([0 1]); 
-    xticklabels({'S','M','D'}); axis square; box off;
-end
+
 
 %% Coherence
 allCohRec = [allMonkeyVars.allCohRec];
@@ -465,7 +453,7 @@ infraDistB = cellfun(@(x) [arrayfun(@(iX) mean(diag(x, -iX), 'omitnan'), 1:(size
 infraDistB = permute(reshape(permute(cat(3, infraDistB{:}), [3 1 2]), ...
     matSize(1), matSize(2), chSize), [1 3 2]);
 
-%%
+%
 for iType = 1:3
     switch iType
         case 1
@@ -497,7 +485,7 @@ for iType = 1:3
     sgtitle(typeLabel);
     end
 end
-%%
+%
 flagVal = termination3b;%true(size(connValsR)); 
 figure; idx = 1;
 for iRef = 1:3

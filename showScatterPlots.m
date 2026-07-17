@@ -16,8 +16,8 @@ for iType = 1:3
             plotLabel = 'Infraslow';
     end
 
-    for iBand = 1:5
-        subplot(3,5,plotIdx);
+    for iBand = 1:size(plotVal,2)
+        subplot(3,size(plotVal,2),plotIdx);
         if strcmp(xLabel,'Distance')
             showExpFit(xVal,plotVal(:,iBand),textLocX,textLocY1,textLocY2)
         else
@@ -28,6 +28,12 @@ for iType = 1:3
         xlabel(xLabel); ylabel(yLabel);
         title([plotLabel '-' bandLabels{iBand}]);
         plotIdx = plotIdx+1;
+        yticks(yLim(1):0.2:yLim(2));
+        if xLim(2)>2
+            xticks(xLim(1):2:xLim(2)); 
+        else
+            xticks(xLim(1):0.2:xLim(2));             
+        end
     end
 end
 end
