@@ -469,9 +469,9 @@ figure;violin(laminarAllFreq,...
     'xlabel',{'Superficial','Middle','Deep'},'bw',0.02,'edgecolor','none');
 
 % Correspondence between FC and pairwise correlations 
-laminarCorr = reshape(corr(connValsNew,laminarMat,'Type','Spearman'),[5 3 3]);
+laminarCorr = reshape(corr(connValsNew,laminarMat,'Type','Spearman'),[6 3 3]);
 figure; 
-for iPlot = 1:5
+for iPlot = 1:6
     subplot(2,3,iPlot);
     imagesc(squeeze(laminarCorr(iPlot,:,:))); colorbar; axis square;
     xticks(1:3); yticks(1:3); clim([0.1 0.5]);
@@ -485,36 +485,36 @@ smLoc(singleChRow)       = [];
 ssLoc(singleChRow)       = [];
 mmLoc(singleChRow)       = [];
 
-ssCorr = mean(reshape(corr(connValsNew(ssLoc),laminarMat(ssLoc,:),'Type','Spearman'),[5 3 3]),3,'omitnan');
-mmCorr = mean(reshape(corr(connValsNew(mmLoc),laminarMat(mmLoc,:),'Type','Spearman'),[5 3 3]),3,'omitnan');
-smCorr = mean(reshape(corr(connValsNew(smLoc),laminarMat(smLoc,:),'Type','Spearman'),[5 3 3]),3,'omitnan');
+ssCorr = mean(reshape(corr(connValsNew(ssLoc),laminarMat(ssLoc,:),'Type','Spearman'),[6 3 3]),3,'omitnan');
+mmCorr = mean(reshape(corr(connValsNew(mmLoc),laminarMat(mmLoc,:),'Type','Spearman'),[6 3 3]),3,'omitnan');
+smCorr = mean(reshape(corr(connValsNew(smLoc),laminarMat(smLoc,:),'Type','Spearman'),[6 3 3]),3,'omitnan');
 
 % Correspondence to FC
 figure; 
-for iPlot = 1:5
+for iPlot = 1:6
     plotVar = [ssCorr(iPlot,:); mmCorr(iPlot,:) ;smCorr(iPlot,:)];
     subplot(2,3,iPlot); imagesc(plotVar); colorbar; axis square;
     title(['Band: ' bandLabels{iPlot}]);
     xticks(1:3); xticklabels(layerLabels);
-    yticks(1:3); yticklabels(areaLabels);
+    yticks(1:3); yticklabels(areaLabels); clim([0 0.4]);
 end
 
 % Correlations 
-ssMedMat = mean(reshape(mean(laminarMat(ssLoc,:),1,'omitnan'),[5 3 3]),3,'omitnan');
-mmMedMat = mean(reshape(mean(laminarMat(mmLoc,:),1,'omitnan'),[5 3 3]),3,'omitnan');
-smMedMat = mean(reshape(mean(laminarMat(smLoc,:),1,'omitnan'),[5 3 3]),3,'omitnan');
+ssMedMat = mean(reshape(mean(laminarMat(ssLoc,:),1,'omitnan'),[6 3 3]),3,'omitnan');
+mmMedMat = mean(reshape(mean(laminarMat(mmLoc,:),1,'omitnan'),[6 3 3]),3,'omitnan');
+smMedMat = mean(reshape(mean(laminarMat(smLoc,:),1,'omitnan'),[6 3 3]),3,'omitnan');
 
 figure; 
-for iPlot = 1:5
+for iPlot = 1:6
  plotVar = [ssMedMat(iPlot,:); mmMedMat(iPlot,:) ;smMedMat(iPlot,:)];
     subplot(2,3,iPlot); imagesc(plotVar); colorbar; axis square;
     title(['Band: ' bandLabels{iPlot}]);
     xticks(1:3); xticklabels(layerLabels);
-    yticks(1:3); yticklabels(areaLabels);
+    yticks(1:3); yticklabels(areaLabels); clim([0 0.4]);
 end 
 
 %% Group the data across animals and also for an individual animal 
-for iM = 1:3
+for iM = 3%1:3
     if iM<3
 
         pairClass = allMonkeyVars(iM).pairClass;
@@ -601,18 +601,18 @@ for iM = 1:3
         intraA = [allMonkeyVars(1).intraCorrAR; allMonkeyVars(2).intraCorrAR];
         intraB = [allMonkeyVars(1).intraCorrBR; allMonkeyVars(2).intraCorrBR];
 
-        envelopeIntraA = [allMonkeyVars(1).envelopeIntraAAllR; allMonkeyVars(2).envelopeIntraAAllR];
-        envelopeIntraB = [allMonkeyVars(1).envelopeIntraBAllR; allMonkeyVars(2).envelopeIntraBAllR];
+        % envelopeIntraA = [allMonkeyVars(1).envelopeIntraAAllR; allMonkeyVars(2).envelopeIntraAAllR];
+        % envelopeIntraB = [allMonkeyVars(1).envelopeIntraBAllR; allMonkeyVars(2).envelopeIntraBAllR];
 
-        infraIntraA = [allMonkeyVars(1).infraIntraAAllR;allMonkeyVars(2).infraIntraAAllR];
-        infraIntraB = [allMonkeyVars(1).infraIntraBAllR;allMonkeyVars(2).infraIntraBAllR];
+        % infraIntraA = [allMonkeyVars(1).infraIntraAAllR;allMonkeyVars(2).infraIntraAAllR];
+        % infraIntraB = [allMonkeyVars(1).infraIntraBAllR;allMonkeyVars(2).infraIntraBAllR];
 
         smLoc = sum(pairClass=='SM',2)==2;
         ssLoc = sum(pairClass=='SS',2)==2;
         mmLoc = sum(pairClass=='MM',2)==2;
-
-        termination3b    = cell2mat({allMonkeyVars.termination3b}');
-        terminationArea4 = cell2mat({allMonkeyVars.terminationArea4}');
+        % 
+        % termination3b    = cell2mat({allMonkeyVars.termination3b}');
+        % terminationArea4 = cell2mat({allMonkeyVars.terminationArea4}');
     end
 
     pairClass(singleChRow,:)      = [];
@@ -621,8 +621,8 @@ for iM = 1:3
     mmLoc(singleChRow)            = [];
     connValsR(singleChRow)        = [];
     distValsR(singleChRow)        = [];
-    termination3b(singleChRow)    = [];
-    terminationArea4(singleChRow) = [];
+    % termination3b(singleChRow)    = [];
+    % terminationArea4(singleChRow) = [];
 
     intraA(singleChRow,:) = [];
     intraB(singleChRow,:) = [];
