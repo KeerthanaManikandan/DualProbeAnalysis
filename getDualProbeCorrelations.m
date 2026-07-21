@@ -248,8 +248,8 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVarsBi
                 envelopeIntraCorrA(iDate,iRun,iBand)  = median(nonzeros(tril(corr(envelopeABandLimited,'rows','complete'))),'all','omitnan');
                 envelopeIntraCorrB(iDate,iRun,iBand)  = median(nonzeros(tril(corr(envelopeBBandLimited,'rows','complete'))),'all','omitnan');
 
-                % envelopeIntraAAll{iDate,iRun,iBand} =  single(tril(corr(envelopeABandLimited,'rows','complete')));
-                % envelopeIntraBAll{iDate,iRun,iBand} =  single(tril(corr(envelopeBBandLimited,'rows','complete')));
+                envelopeIntraAAll{iDate,iRun,iBand} =  single(tril(corr(envelopeABandLimited,'rows','complete')));
+                envelopeIntraBAll{iDate,iRun,iBand} =  single(tril(corr(envelopeBBandLimited,'rows','complete')));
 
                 % Correlate instantaneous band power between electrodes
                 medCorrEnvelope(iDate,iRun,iBand)  =  corr(median(envelopeABandLimited,2,'omitnan'),median(envelopeBBandLimited,2,'omitnan'));
@@ -259,8 +259,8 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVarsBi
                 infraIntraCorrA(iDate,iRun,iBand)  = median(nonzeros(tril(corr(infraSlowA,'rows','complete'))),'all','omitnan');
                 infraIntraCorrB(iDate,iRun,iBand)  = median(nonzeros(tril(corr(infraSlowB,'rows','complete'))),'all','omitnan');
 
-                % infraIntraAAll{iDate,iRun,iBand} =  single(tril(corr(infraSlowA,'rows','complete')));
-                % infraIntraBAll{iDate,iRun,iBand} =  single(tril(corr(infraSlowB,'rows','complete')));
+                infraIntraAAll{iDate,iRun,iBand} =  single(tril(corr(infraSlowA,'rows','complete')));
+                infraIntraBAll{iDate,iRun,iBand} =  single(tril(corr(infraSlowB,'rows','complete')));
 
                 % Correlate infraslow flucutuations in instantaneous band
                 % power between electrodes
@@ -469,11 +469,11 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVarsBi
     intraCorrAR    = reshape(intraCorrA,[matSize(1)*matSize(2) size(intraCorrA,3)]);
     intraCorrBR    = reshape(intraCorrB,[matSize(1)*matSize(2) size(intraCorrB,3)]);
 
-    % envelopeIntraAAllR = reshape(envelopeIntraAAll,[matSize(1)*matSize(2) size(intraCorrA,3)]);
-    % envelopeIntraBAllR = reshape(envelopeIntraBAll,[matSize(1)*matSize(2) size(intraCorrA,3)]);
+    envelopeIntraAAllR = reshape(envelopeIntraAAll,[matSize(1)*matSize(2) size(intraCorrA,3)]);
+    envelopeIntraBAllR = reshape(envelopeIntraBAll,[matSize(1)*matSize(2) size(intraCorrA,3)]);
 
-    % infraIntraAAllR  = reshape(infraIntraAAll,[matSize(1)*matSize(2) size(intraCorrA,3)]);
-    % infraIntraBAllR  = reshape(infraIntraBAll,[matSize(1)*matSize(2) size(intraCorrA,3)]);
+    infraIntraAAllR  = reshape(infraIntraAAll,[matSize(1)*matSize(2) size(intraCorrA,3)]);
+    infraIntraBAllR  = reshape(infraIntraBAll,[matSize(1)*matSize(2) size(intraCorrA,3)]);
 
     medPairCorrR      = reshape(medPairCorr,[matSize(1)*matSize(2) size(medPairCorr,3)]);
     medCorrEnvelopeR  = reshape(medCorrEnvelope,[matSize(1)*matSize(2) size(meanPairCorr,3)]);
@@ -531,8 +531,8 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVarsBi
     % medPairCorrFreqInfraIntraAR = reshape(medPairCorrFreqInfraIntraA,[size(medPairCorrFreqInfra,1) size(medPairCorrFreqInfra,2)*size(medPairCorrFreqInfra,3)]);
     % medPairCorrFreqInfraIntraBR = reshape(medPairCorrFreqInfraIntraB,[size(medPairCorrFreqInfra,1) size(medPairCorrFreqInfra,2)*size(medPairCorrFreqInfra,3)]);
 
-    % meanSpecValsAR = reshape(meanSpecValsA,[matSize(1)*matSize(2) 5 21]);
-    % meanSpecValsBR = reshape(meanSpecValsB,[matSize(2)*matSize(2) 5 21]);
+    meanSpecValsAR = reshape(meanSpecValsA,[matSize(1)*matSize(2) 6 21]);
+    meanSpecValsBR = reshape(meanSpecValsB,[matSize(1)*matSize(2) 6 21]);
 
     nanVals       = (isnan(connValsR) | isnan(medPairCorrR(:,1)));
     lowCorrVals   = (medIntraCorrAR(:,4)<=0.2 | medIntraCorrBR(:,4)<=0.2);
@@ -584,27 +584,27 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVarsBi
     intraCorrAR(removeDataIdx,:) = [];
     intraCorrBR(removeDataIdx,:) = [];
 
-    % envelopeIntraAAllR(removeDataIdx,:) = [];
-    % envelopeIntraBAllR(removeDataIdx,:) = [];
+    envelopeIntraAAllR(removeDataIdx,:) = [];
+    envelopeIntraBAllR(removeDataIdx,:) = [];
 
-    % infraIntraAAllR(removeDataIdx,:) = [];
-    % infraIntraBAllR(removeDataIdx,:) = [];
-    %
+    infraIntraAAllR(removeDataIdx,:) = [];
+    infraIntraBAllR(removeDataIdx,:) = [];
+
     % medPairCorrFreqTimeR(:,removeDataIdx)                = [];
     % medPairCorrFreqTimeIntraAR(:,removeDataIdx)          = [];
     % medPairCorrFreqTimeIntraBR(:,removeDataIdx)          = [];
-    %
+    % 
     % medPairCorrFreqPowerR(:,removeDataIdx)                = [];
     % medPairCorrFreqPowerIntraAR(:,removeDataIdx)          = [];
     % medPairCorrFreqPowerIntraBR(:,removeDataIdx)          = [];
-    %
+    % 
     % medPairCorrFreqInfraR(:,removeDataIdx)       = [];
     % medPairCorrFreqInfraIntraAR(:,removeDataIdx) = [];
     % medPairCorrFreqInfraIntraBR(:,removeDataIdx) = [];
 
-    % meanSpecValsAR(removeDataIdx,:,:) = [];
-    % meanSpecValsBR(removeDataIdx,:,:) = [];
-
+    meanSpecValsAR(removeDataIdx,:,:) = [];
+    meanSpecValsBR(removeDataIdx,:,:) = [];
+    
     % freqCombNames = {'Theta-Alpha','Theta-Beta','Theta-Gamma','Theta-Spiking',...
     %     'Alpha-Beta','Alpha-Gamma','Alpha-Spiking','Beta-Gamma','Beta-Spiking','Gamma-Spiking'};
 
@@ -630,7 +630,8 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVarsBi
         'medPairAMidBSuperR','medPairAMidBDeepR','medPairADeepBSuperR','medPairADeepBMidR','envelopeASuperBMidR',...
         'envelopeASuperBDeepR','envelopeAMidBSuperR','envelopeAMidBDeepR','envelopeADeepBSuperR','envelopeADeepBMidR',...
         'infraASuperBMidR','infraASuperBDeepR','infraAMidBSuperR','infraAMidBDeepR','infraADeepBSuperR','infraADeepBMidR',...
-        'removeDataIdx','intraCorrAR','intraCorrBR');
+        'removeDataIdx','intraCorrAR','intraCorrBR','envelopeIntraAAllR','envelopeIntraBAllR','infraIntraAAllR',...
+        'infraIntraBAllR','meanSpecValsAR','meanSpecValsBR');
 
 end
 

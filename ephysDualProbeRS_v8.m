@@ -36,7 +36,7 @@ saveFigureFlag = 0;
 chOutCortex    = 1:3;
 chDeep         = 30:32;
 
-iM = 1; % 1 - Charlie Sheen, 2 - Whiskey
+iM = 2; % 1 - Charlie Sheen, 2 - Whiskey
 switch iM
     case 1
         monkeyName = 'CharlieSheen';
@@ -98,208 +98,6 @@ bandLabels = {'Theta', 'Alpha', 'Beta', 'Gamma','Spiking'};
 timeLabels = {'Time series','Power','Infraslow'};
 [allVars] = getDualProbeCorrelations(monkeyName, hemisphere, allDates, datFileNumAll,allProbeData,allBadTimes,...
     badElecA,badElecB,estChInCortexA,estChInCortexB,connValsAll,distSitesAll,goodRuns);
-
-%% Spatially and temporally bin the gamma powers
-binSize = 5;
-rowLen = max(cell2mat(cellfun(@length,datFileNumAll,'un',0)));
-gammaEnvelope       = NaN(rowLen,size(allDates,1),'single');
-gammaEnvelopeTime   = NaN(rowLen,size(allDates,1),'single');
-gammaEnvelopeSpace  = NaN(rowLen,size(allDates,1),'single');
-gammaEnvelopeST     = NaN(rowLen,size(allDates,1),'single');
-gammaWithinA        = NaN(rowLen,size(allDates,1),'single');
-gammaWithinB        = NaN(rowLen,size(allDates,1),'single');
-gammaEnvTimeA       = NaN(rowLen,size(allDates,1),'single');
-gammaEnvTimeB       = NaN(rowLen,size(allDates,1),'single');
-
-
-for iDate = 1:size(allDates,1)
-        clear expDate datFileNum saveFolder
-        expDate    = allDates(iDate,:);
-        datFileNum = datFileNumAll{iDate,1};
-
-        for iRun = 1:length(datFileNum)
-            fileNum = datFileNum(iRun);
-            clear probeA probeB chA chB xA xB xATemp xBTemp envelopeABandLimited...
-                envelopeBBandLimited envelopeATime envelopeBTime xATemp xBTemp
-
-            clc; disp(['Processing data for ' monkeyName ': Date: ' allDates(iDate,:) ' ; File: ' num2str(fileNum)]);
-            tic;
-
-            % Get the ephys data
-            clear probeA probeB rawA rawB
-            probeA = allProbeData{fileNum,iDate}.probe1Ch;
-            probeB = allProbeData{fileNum,iDate}.probe2Ch;
-
-            % Remove bad channels
-            probeA(:,badElecA{fileNum,iDate}) = [];
-            probeB(:,badElecB{fileNum,iDate}) = [];
-
-            % Remove bad times
-            probeA(allBadTimes{fileNum,iDate},:) = [];
-            probeB(allBadTimes{fileNum,iDate},:) = [];
-
-            chA = estChInCortexA{iDate}(iRun,:);
-            chB = estChInCortexB{iDate}(iRun,:);
-
-             if chA(1) == 0 || chB(1) == 0 || isempty(probeA) || isempty(probeB) 
-                 gammaEnvelope(iRun,iDate) = NaN;
-                continue;
-             end
-             
-             xA = filtfilt(bG,aG,double(probeA(:,chA(1):chA(2))));
-             xB = filtfilt(bG,aG,double(probeB(:,chB(1):chB(2))));
-             
-             envelopeABandLimited = envelope(abs(xA),5);
-             envelopeBBandLimited = envelope(abs(xB),5);
-
-             % Temporal binning
-             % parfor iT = 1:floor(size(xA,1)/binSize)
-             %     xATemp(iT,:) = mean(xA((((iT-1)*binSize+1):(iT*binSize)),:),1);
-             %     xBTemp(iT,:) = mean(xB((((iT-1)*binSize+1):(iT*binSize)),:),1);
-             % end        
-            
-             parfor iT = 1:floor(size(xA,1)/binSize)
-                 envelopeATime(iT,:) = mean(envelopeABandLimited((((iT-1)*binSize+1):(iT*binSize)),:),1);
-                 envelopeBTime(iT,:) = mean(envelopeBBandLimited((((iT-1)*binSize+1):(iT*binSize)),:),1);
-             end
-            
-             % envelopeABandLimited = envelope(abs(xA),5);
-             % envelopeBBandLimited = envelope(abs(xB),5);
-
-             % envelopeATime = envelope(abs(xATemp),5); 
-             % envelopeBTime = envelope(abs(xBTemp),5);
-
-             gammaEnvelope(iRun,iDate)      = median(corr(envelopeABandLimited,envelopeBBandLimited),'all','omitnan');
-             gammaEnvelopeTime(iRun,iDate)  = median(corr(envelopeATime,envelopeBTime),'all','omitnan');
-             gammaEnvelopeSpace(iRun,iDate) = corr(median(envelopeABandLimited,2),median(envelopeBBandLimited,2)); 
-             gammaEnvelopeST(iRun,iDate)    = corr(median(envelopeATime,2),median(envelopeBTime,2));      
-
-             % Within electrode correlations
-             gammaWithinA(iRun,iDate)= median(corr(envelopeABandLimited),'all','omitnan'); 
-             gammaWithinB(iRun,iDate)= median(corr(envelopeBBandLimited),'all','omitnan'); 
-
-             gammaEnvTimeA(iRun,iDate) = median(corr(envelopeATime),'all','omitnan');
-             gammaEnvTimeB(iRun,iDate) = median(corr(envelopeBTime),'all','omitnan');
-            
-             toc;
-        end
-
-end
-gammaEnvelopeT = reshape(gammaEnvelope,[numel(connValsAll) 1]); 
-connValsAllT = reshape(connValsAll,[numel(connValsAll) 1]);  
-nanIdx = isnan(gammaEnvelopeT) | isnan(connValsAllT); gammaEnvelopeT(nanIdx) = []; 
-connValsAllT(nanIdx) = []; 
-gammaEnvelopeTimeT = reshape(gammaEnvelopeTime,[numel(connValsAll) 1]);  gammaEnvelopeTimeT(nanIdx) = []; 
-gammaEnvelopeSpaceT = reshape(gammaEnvelopeSpace,[numel(connValsAll) 1]);  gammaEnvelopeSpaceT(nanIdx) = []; 
-gammaEnvelopeSTTemp = reshape(gammaEnvelopeST,[numel(connValsAll) 1]);  gammaEnvelopeSTTemp(nanIdx) = []; 
-
-gammaWithinAT = reshape(gammaWithinA,[numel(connValsAll) 1]); gammaWithinAT(nanIdx) = []; 
-gammaWithinBT = reshape(gammaWithinB,[numel(connValsAll) 1]); gammaWithinBT(nanIdx) = []; 
-
-gammaEnvTimeAT = reshape(gammaEnvTimeA,[numel(connValsAll) 1]); gammaEnvTimeAT(nanIdx) = []; 
-gammaEnvTimeBT = reshape(gammaEnvTimeB,[numel(connValsAll) 1]); gammaEnvTimeBT(nanIdx) = []; 
-
-figure;
-boxplot([gammaEnvelopeT gammaEnvelopeTimeT gammaEnvelopeSpaceT gammaEnvelopeSTTemp],...
-    {'No binning','Time binning','Space binning','Spacetime binning'}); 
-ylabel('Gamma power correlations'); box off;
-
-[p,t,stats] = anova1([gammaEnvelopeT gammaEnvelopeTimeT gammaEnvelopeSpaceT gammaEnvelopeSTTemp],...
-{'No binning','Time binning','Space binning','Spacetime binning'});
-[c,m,h,gnames] = multcompare(stats);
-
-figure; 
-boxplot([[gammaWithinAT; gammaWithinBT] [gammaEnvTimeAT;gammaEnvTimeBT]],...
-    {'No binning','Time binning'}); ylabel('Gamma correlations within an electrode'); box off; 
-
-% gammaEnvelopeW = gammaEnvelopeT;
-% connValsW  = connValsAllT;
-% gammaTimeW = gammaEnvelopeTimeT;
-% gammaSpaceW = gammaEnvelopeSpaceT; 
-% gammaSTW = gammaEnvelopeSTTemp; 
-% gammaWithinAW = gammaWithinAT; 
-% gammaWithinBW = gammaWithinBT; 
-% gammaEnvTimeAW = gammaEnvTimeAT; 
-% gammaEnvTimeBW = gammaEnvTimeBT; 
-
-%% 
-figure;
-for iPlot = 1:4
-    switch iPlot
-        case 1
-            yVal = gammaEnvelopeT;
-            labelVal = 'No binning';
-        case 2
-            yVal = gammaEnvelopeTimeT;
-            labelVal = 'Time binning';
-        case 3
-            yVal = gammaEnvelopeSpaceT;
-            labelVal = 'Space binning';
-        case 4
-            yVal = gammaEnvelopeSTTemp;
-            labelVal = 'Space-Time binning';
-    end
-
-    subplot(2,2,iPlot);
-    showLinearFit(connValsAllT,yVal);
-    title(labelVal); box off; axis square;
-    xlabel('Functional connectivity'); ylabel('Gamma correlation');
-    ylim([0 1]);
-end
-
-%%
-conn = [connValsAllT; connValsW];
-env = [gammaEnvelopeT;gammaEnvelopeW]; 
-envT =[gammaEnvelopeTimeT;gammaTimeW]; 
-envS =[gammaEnvelopeSpaceT;gammaSpaceW]; 
-envST =[gammaEnvelopeSTTemp;gammaSTW]; 
-
-% withinNoBin = [[gammaWithinAT; gammaWithinBT]; [gammaWithinAW; gammaWithinBW]]; 
-% withinTimeBin = [[gammaEnvTimeAT; gammaEnvTimeBT]; [gammaEnvTimeAW; gammaEnvTimeBW]];
-% 
-withinNoBin = [(gammaWithinAT+ gammaWithinBT)./2; (gammaWithinAW+ gammaWithinBW)./2]; 
-withinTimeBin = [(gammaEnvTimeAT+ gammaEnvTimeBT)./2; (gammaEnvTimeAW+ gammaEnvTimeBW)./2];
-
-figure;
-boxplot([withinNoBin withinTimeBin],...
-    {'No binning','Time binning'}); ylabel('Gamma correlations within an electrode'); box off; 
-ylim([-0.05 1]);
-
-figure; 
-boxplot([env envT envS envST],...
-    {'No binning','Time binning','Space binning','Spacetime binning'}); 
-ylabel('Gamma power correlations'); box off;
-
-[p,t,stats] = anova1([env envT envS envST],...
-{'No binning','Time binning','Space binning','Spacetime binning'});
-[c,m,h,gnames] = multcompare(stats);
-
-figure;
-for iPlot = 1:4
-    switch iPlot
-        case 1
-            yVal = env;
-            labelVal = 'No binning';
-        case 2
-            yVal = envT;
-            labelVal = 'Time binning';
-        case 3
-            yVal = envS;
-            labelVal = 'Space binning';
-        case 4
-            yVal = envST;
-            labelVal = 'Space-Time binning';
-    end
-
-    subplot(2,2,iPlot);
-    showLinearFit(conn,yVal);
-    title(labelVal); box off; axis square;
-    xlabel('Functional connectivity'); ylabel('Gamma correlation');
-    ylim([0 1]);
-end
-
-
-
 
 %% Save bad channels, bad times in LFP mat file
 % for iDate = 1: size(allDates,1)
@@ -523,6 +321,7 @@ grid on; set(gca, 'YGrid', 'off', 'XGrid', 'on');
 box off; axis square; ylim([-25 15]);
 ylabel('Power (dB)'); xlabel('Frequency (Hz)');
 
+
 %% Get coherence
 
 params.Fs     = fs;
@@ -534,8 +333,6 @@ params.trialave = 1;
 
 paramsRaw       = params;
 paramsRaw.fpass = [250 500];
-
-
 
 winSize  = 1e3;
 C     = cellfun(@(x) NaN(116,231,'single'), cell(maxDates,maxRuns), 'UniformOutput', false);
@@ -585,22 +382,14 @@ for iDate = 1: size(allDates,1)
             probeA = allProbeData{fileNum,iDate}.probe1Ch;
             probeB = allProbeData{fileNum,iDate}.probe2Ch;
 
-            % rawA   = allProbeData{fileNum,iDate}.raw1Ch;
-            % rawB   = allProbeData{fileNum,iDate}.raw2Ch;
-
             % Remove bad channels
             probeA(:,badElecA{fileNum,iDate}) = [];
             probeB(:,badElecB{fileNum,iDate}) = [];
-
-            % rawA(:,badElecA{fileNum,iDate}) = [];
-            % rawB(:,badElecB{fileNum,iDate}) = [];
 
             % Remove bad times
             probeA(allBadTimes{fileNum,iDate},:) = [];
             probeB(allBadTimes{fileNum,iDate},:) = [];
             %
-            % rawA(allBadTimes{fileNum,iDate},:) = [];
-            % rawB(allBadTimes{fileNum,iDate},:) = [];
 
             chA = estChInCortexA{iDate}(iRun,:);
             chB = estChInCortexB{iDate}(iRun,:);
@@ -710,6 +499,7 @@ save(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.mat'],
     'allCohVals','-append');
 end
 
+
 %% Visualize the mean coherence for BLP
 fBandT = fBand{1,1}';
 allCohBand = cellfun(@(x) squeeze(median(x,2,'omitnan')),CBand,'un',0);
@@ -748,11 +538,11 @@ distValsR = reshape(distValsR,[maxRuns*maxDates 1]);
 distValsR(allVars.removeDataIdx) = [];
 
 %%
-cohNew  = cat(3,allCohBand,cohBandCS);
-cErrNew = cat(4,allCerrBand,CerrBandCS);
-connAll = [connValsR; connValsCS];
-distAll = [distValsR; distValsCS];
-
+% cohNew  = cat(3,allCohBand,cohBandCS);
+% cErrNew = cat(4,allCerrBand,CerrBandCS);
+% connAll = [connValsR; connValsCS];
+% distAll = [distValsR; distValsCS];
+% 
 %%
 figure;
 for iBand = 1:4  

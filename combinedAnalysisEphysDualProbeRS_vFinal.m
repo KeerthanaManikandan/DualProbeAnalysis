@@ -40,189 +40,6 @@ ssLoc = sum(pairClass=='SS',2)==2;
 mmLoc = sum(pairClass=='MM',2)==2;
 
 
-connValsZ  = zscore(connVals,[],1);
-medCorrZ   = zscore(medPairCorr,[],1);
-envCorrZ   = zscore(medEnvelopeCorr,[],1); 
-infraCorrZ = zscore(medInfraSlowCorr,[],1) ;
-
-
-% Rescaling
-maxVal = 1; minVal = 0;
-connValsZ  =  ((maxVal-minVal).*(connValsZ-min(connValsZ))./(max(connValsZ)-min(connValsZ)))+minVal;
-medCorrZ   =  ((maxVal-minVal).*(medCorrZ-min(medCorrZ))./(max(medCorrZ)-min(medCorrZ)))+minVal;
-envCorrZ   =  ((maxVal-minVal).*(envCorrZ-min(envCorrZ))./(max(envCorrZ)-min(envCorrZ)))+minVal;
-infraCorrZ =  ((maxVal-minVal).*(infraCorrZ-min(infraCorrZ))./(max(infraCorrZ)-min(infraCorrZ)))+minVal;
-
-showScatterPlots(connValsZ,medCorrZ,envCorrZ,infraCorrZ,...
-'Functional Connectivity','Pairwise correlations',[-1 1],[-1 1],...
--0.5,0.9,0.8,bandLabels);
-
-% Rescale between -1 to 1
-
-% Normalize FC and correlations
-devPairCorr = abs(medCorrZ-connValsZ);
-devEnvelope = abs(envCorrZ-connValsZ);
-devInfraSlow = abs(infraCorrZ-connValsZ);
-
-% % Rank and rescale elements 
-% maxVal = 1; minVal = -1;
-% medPairCorrRank      = tiedrank(medPairCorr);
-% medPairCorrRank      = minVal + ((medPairCorrRank-1)*(maxVal-minVal)/(length(medPairCorrRank)-1));
-
-% % Calculate deviation from FC
-% devPairCorr = abs(medPairCorr-connVals);
-% devEnvelope = abs(medEnvelopeCorr-connVals);
-% devInfraSlow = abs(medInfraSlowCorr-connVals);
-
-% Calculate the ratio between FC and pairwise
-% devPairCorr = abs(medPairCorr-connVals)./connVals;
-% devEnvelope = abs(medEnvelopeCorr-connVals)./connVals;
-% devInfraSlow = abs(medInfraSlowCorr-connVals)./connVals;
-
-angleVals = abs(atand(connVals./medPairCorr) - 45);
-
-figure;boxplot(angleVals,bandLabels);
-ylabel('Angle (degrees)'); box off; 
-[p,t,stats] = anova1(angleVals,bandLabels);
-[c,m,h,gnames] = multcompare(stats);
-
-%% Plot the distribution of deviation
-figure; 
-for iPlot = 1:3
-    switch iPlot
-        case 1
-            plotVal = devPairCorr;
-            plotLbl = 'Time series';
-        case 2
-            plotVal = devEnvelope;
-            plotLbl = 'Power';
-        case 3
-            plotVal = devInfraSlow;
-            plotLbl = 'Infra-slow';
-    end
-    subplot(1,3,iPlot);
-    boxplot(plotVal,bandLabels); 
-    ylabel('Bias');
-    % violin(plotVal);
-    title(plotLbl); box off; ylim([-0.05 1]);
-end
-
-[p,t,stats] = anova1(devPairCorr,bandLabels);
-[c,m,h,gnames] = multcompare(stats);
-
-%% Calculate the concordance correlation coefficient
-for iP = 1:3
-    switch iP
-        case 1
-            val = medPairCorr;
-        case 2
-            val = medEnvelopeCorr;
-        case 3
-            val = medInfraSlowCorr;
-    end
-    % 
-    % r = mean((val-mean(val,1)).*(connVals-mean(connVals)),1,'omitnan') ./ sqrt(var(val,1)*var(connVals,1)); 
-    % v = sqrt(var(val,1) ./ var(connVals,1));
-    % u = (mean(val,1) - mean(connVals)) ./ sqrt(sqrt(var(val,1)) .* sqrt(var(connVals,1)));
-    % biasFactor = 2 ./ (v + 1./v + u.^2);
-    % ccc = r .* biasFactor;
-
-        vif(:,iP) = diag(inv(corrcoef(vals)));
-
-    y = zscore(connVals);
-    X  = zscore(vals);
-    clear  beta sigma eVal covMat
-
-    % Get the linear model 
-    mdlAll{iP} = fitlm(X,y,'VarNames',{'Theta','Alpha','Beta','Gamma','Spk','FC'});
-
-    % Relative weights analysis to determine contributions of predictors
-    [relImp(iP), r2(iP)] = rwa(X,y,bandLabels');
-
-    % Dominance analysis
-    [relativeImportance(:,iP),rsqDominance(iP)] = dominance(X,y);
-    percentImportance(:,iP) = 100*relativeImportance(:,iP)./rsqDominance(iP);
-
-end
-
-% for iType = 1:3
-%     switch iType
-%         case 1
-%             vals = medPairCorr;
-%         case 2
-%             vals = medEnvelopeCorr;
-%         case 3
-%             vals = medInfraSlowCorr;
-%     end
-% 
-%     % Check for multicollinearity - uncomment if you want to visualize the
-%     % correlations between frequencies 
-%     % [~,~,h] = corrplot(double(vals),'VarNames',bandLabels,Type='Pearson',TestR="on");
-%     % hAxes = findobj('Type','axes');
-%     % set(hAxes(1:30),"XLim",[-0.6 1],"YLim",[-0.6 1]);
-%     % cla(hAxes([1:5 6:6:30]));
-% 
-% 
-%     % Checking for multicollinearity by calculating Variance Inflation
-%     % factor. VIF = diagonal elements of inverse of correlation matrix.
-%     vif(:,iType) = diag(inv(corrcoef(vals)));
-% 
-%     % vals = (vals-mean(vals))./std(vals);
-%     y = zscore(connVals);
-%     X  = zscore([vals distVals]);
-%     clear  beta sigma eVal covMat
-% 
-%     % Get the linear model 
-%     % mdlAll{iType} = fitlm(X,y,'VarNames',{'Theta','Alpha','Beta','Gamma','Spk','FC'});
-% 
-%     % Relative weights analysis to determine contributions of predictors
-%     [relImp(iType), r2(iType)] = rwa(X,y,bandLabels');
-% 
-%     % Dominance analysis
-%     [relativeImportance(:,iType),rsqDominance(iType)] = dominance(X,y);
-%     percentImportance(:,iType) = 100*relativeImportance(:,iType)./rsqDominance(iType);
-% end
-
-% PCA for theta-beta frequencies
-Z = zscore(medEnvelopeCorr); 
-y = zscore(connVals);
-[coeff,score,~,~,explained] = pca(Z(:,1:3));
-pc1 = score(:,1); 
-mdl = fitlm([pc1 Z(:,4:5)], zscore(connVals));
-% [~,se,coeff1] = hac(mdl,'type','HC','weights','HC3');
-
-% % Ridge regression
-% lambdas = 0:0.1:20; B = ridge(y, Z, lambdas, 0); 
-% figure; plot(lambdas, B);
-
-resid_2 = Z(:,2) - [ones(size(Z,1),1) Z(:,3)]*regress(Z(:,2),[ones(size(Z,1),1) Z(:,3)]); 
-resid_1 = Z(:,1) - [ones(size(Z,1),1) Z(:,3) Z(:,2)]*regress(Z(:,1),[ones(size(Z,1),1) Z(:,3) Z(:,2)]); 
-mdl = fitlm([resid_1 resid_2 Z(:,3:5)], y);
-
-%%
-
-lambdas = 0:0.5:50;
-cvp = cvpartition(length(y),'KFold',10);
-mse = zeros(size(lambdas));
-for i = 1:length(lambdas)
-    errs = zeros(10,1);
-    for j = 1:10
-        tr = training(cvp,j); te = test(cvp,j);
-        b = ridge(y(tr), [Z(tr,:)], lambdas(i), 0);
-        pred = [ones(sum(te),1) Z(te,:)] * b;
-        errs(j) = mean((y(te) - pred).^2);
-    end
-    mse(i) = mean(errs);
-end
-[~, idx] = min(mse); 
-best_lambda = lambdas(idx);
-b_final = ridge(y, Z, best_lambda, 0);
-
-
-yhat = [ones(length(y),1) Z] * b_final; 
-SS_res = sum((y - yhat).^2); SS_tot = sum((y - mean(y)).^2); 
-R2_ridge = 1 - SS_res/SS_tot;
-
 %% Pairwise correlations vs FC 
 showScatterPlots(connVals,medPairCorr,medEnvelopeCorr,medInfraSlowCorr,...
     'Functional Connectivity','Pairwise correlations',[-0.6 1],[-0.1 1],...
@@ -238,6 +55,7 @@ figure; subplot(121); histogram(connVals,-0.6:0.2:1); box off;xlabel('Functional
 subplot(122); histogram(distVals,0:2:16); xlabel('Distance (mm)'); box off;ylim([0 50]); xticks(0:2:20);
 
 %% Partial correlation calculations
+clear rhoVal pVal
 for iType = 1:3
     clear var
     switch iType
@@ -248,7 +66,7 @@ for iType = 1:3
         case 3
             var = medInfraSlowCorr; 
     end
-    for iBand = 1:6
+    for iBand = 1:5
         [rhoVal(iType,iBand),pVal(iType,iBand)] = corr(connVals,var(:,iBand),"Type","Spearman");
     end
 end
