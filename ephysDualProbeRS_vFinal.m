@@ -1,4 +1,4 @@
-%% ephysDualProbeRS_v8
+%% ephysDualProbeRS_vFinal
 % This function performs analysis on LFP recorded simultaneously from two linear electrode arrays.
 % January 14, 2026 - Keerthana Manikandan
 % This code performs the following for ONE MONKEY (for combined analyis,
@@ -94,48 +94,10 @@ disp(['Obtained/retrieved distance between probes, connectivity values, heart ra
     datFileNameAll, datFileNumAll,serverPath,chInCortexProbeA,chInCortexProbeB,probeLabelA,probeLabelB,saveFigureFlag);
 
 %% Get all pairwise correlations
-bandLabels = {'Theta', 'Alpha', 'Beta', 'Gamma','Spiking'};
+bandLabels = {'Theta', 'Alpha', 'Beta', 'Gamma','Spiking','0-30 Hz'};
 timeLabels = {'Time series','Power','Infraslow'};
 [allVars] = getDualProbeCorrelations(monkeyName, hemisphere, allDates, datFileNumAll,allProbeData,allBadTimes,...
     badElecA,badElecB,estChInCortexA,estChInCortexB,connValsAll,distSitesAll,goodRuns);
-
-%% Save bad channels, bad times in LFP mat file
-% for iDate = 1: size(allDates,1)
-%     clear expDate
-%     expDate = allDates(iDate,:);
-%     saveFolder = ['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\' expDate '\Electrophysiology\Processed Data'];
-% 
-%     for iRun = 1:length(datFileNumAll{iDate,1})
-%         clear fileNum zL pL kL
-%         fileNum = datFileNumAll{iDate,1}(iRun);  
-% 
-%         % Get the name of stored file
-%         if strcmp(expDate,'11_01_2021') && (fileNum == 1 || fileNum == 2) % Only for Charlie Sheen
-%             datFileName = 'datafile_000';
-%         else
-%             datFileName = datFileNameAll{iDate,1};
-%         end
-% 
-%         if (fileNum>=10)
-%             datFileName = datFileName(1:end-1);
-%         end
-% 
-%         badElecA = badElecAall{fileNum,iDate};
-%         badElecB = badElecBall{fileNum,iDate};
-%         chCortexA = estChInCortexA{iDate}(fileNum,:);
-%         chCortexB = estChInCortexB{iDate}(fileNum,:);
-%         badTimes = allBadTimes{fileNum,iDate};
-% 
-%         save([saveFolder '\' datFileName num2str(fileNum) '_lfp.mat'] ,'badElecA','badElecB',...
-%             'chCortexA','chCortexB','badTimes','-append');
-%     end
-% end
-
-%% Get all pairwise correlations
-% bandLabels = {'Theta', 'Alpha', 'Beta', 'Gamma','Spiking'};
-% timeLabels = {'Time series','Power','Infraslow'};
-% [allVars] = getDualProbeCorrelations(monkeyName, hemisphere, allDates, datFileNumAll,allProbeData,allBadTimes,...
-%     badElecA,badElecB,estChInCortexA,estChInCortexB,connValsAll,distSitesAll,goodRuns);
 
 %% Get anesthesia recordings
 

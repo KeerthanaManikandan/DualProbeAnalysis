@@ -32,12 +32,70 @@ medPairCorr      = [allMonkeyVars(1).medPairCorrR; allMonkeyVars(2).medPairCorrR
 medEnvelopeCorr  = [allMonkeyVars(1).medCorrEnvelopeR; allMonkeyVars(2).medCorrEnvelopeR];
 medInfraSlowCorr = [allMonkeyVars(1).medCorrInfraSlowR; allMonkeyVars(2).medCorrInfraSlowR];
 
+% Within electrode correlations
+intraA = [allMonkeyVars(1).intraCorrAR; allMonkeyVars(2).intraCorrAR];
+intraB = [allMonkeyVars(1).intraCorrBR; allMonkeyVars(2).intraCorrBR];
+
+envelopeIntraA = [allMonkeyVars(1).envelopeIntraAAllR; allMonkeyVars(2).envelopeIntraAAllR];
+envelopeIntraB = [allMonkeyVars(1).envelopeIntraBAllR; allMonkeyVars(2).envelopeIntraBAllR];
+
+infraIntraA = [allMonkeyVars(1).infraIntraAAllR;allMonkeyVars(2).infraIntraAAllR];
+infraIntraB = [allMonkeyVars(1).infraIntraBAllR;allMonkeyVars(2).infraIntraBAllR];
+
+avgIntraA = cell2mat(cellfun(@(x) mean(tril(x,-1),"all",'omitnan'),intraA,'UniformOutput',0));
+avgIntraB = cell2mat(cellfun(@(x) mean(tril(x,-1),"all",'omitnan'),intraB,'UniformOutput',0));
+
+avgEnvA = cell2mat(cellfun(@(x) mean(tril(x,-1),"all",'omitnan'),envelopeIntraA,'UniformOutput',0));
+avgEnvB = cell2mat(cellfun(@(x) mean(tril(x,-1),"all",'omitnan'),envelopeIntraB,'UniformOutput',0));
+
+avgInfraA = cell2mat(cellfun(@(x) mean(tril(x,-1),"all",'omitnan'),infraIntraA,'UniformOutput',0));
+avgInfraB = cell2mat(cellfun(@(x) mean(tril(x,-1),"all",'omitnan'),infraIntraB,'UniformOutput',0));
+
 
 % Get cortical areas of the pairs
 pairClass = [allMonkeyVars(1).pairClass; allMonkeyVars(2).pairClass];
 smLoc = sum(pairClass=='SM',2)==2;
 ssLoc = sum(pairClass=='SS',2)==2;
 mmLoc = sum(pairClass=='MM',2)==2;
+
+%% Plot distributions of correlations as a heatmap 
+figure; idx = 1; 
+for iType = 1:3
+    clear wthn btw
+    switch iType
+        case 1
+            wthn = [avgIntraA;avgIntraB]; 
+            btw  = medPairCorr;
+        case 2
+            wthn = [avgEnvA;avgEnvB]; 
+            btw  = medEnvelopeCorr;
+        case 3
+            wthn = [avgInfraA;avgInfraB]; 
+            btw  = medInfraSlowCorr;
+    end
+
+    wthnAll(iType,:) = median(wthn,1,'omitnan');
+    btwAll(iType,:) = median(btw,1,'omitnan');
+
+    % Plot the distributions of correlations for the timescales
+    subplot(2,3,idx); boxplot(wthn(:,1:5),bandLabels(:,1:5)); ylim([-0.4 1]); yticks(-0.4:0.2:1);
+    title(['Within electode: ' timeLabels{iType}]); box off; 
+
+    subplot(2,3,idx+3); boxplot(btw(:,1:5),bandLabels(:,1:5)); ylim([-0.4 1]);
+    title(['Between electodes: ' timeLabels{iType}]); box off;  
+    idx = idx+1;
+
+end
+
+% Plot the heatmap of correlations
+figure; 
+subplot(121); imagesc(wthnAll(:,1:5));xticks(1:5); yticks(1:3); axis square; 
+xticklabels(bandLabels); yticklabels(timeLabels); colorbar; clim([0 0.6]);
+title('Within electrode correlations');
+
+subplot(122); imagesc(btwAll(:,1:5)); xticks(1:5); yticks(1:3); axis square;
+xticklabels(bandLabels); yticklabels(timeLabels); colorbar;clim([0 0.6]);
+title('Between electrode correlations');
 
 
 %% Pairwise correlations vs FC 
@@ -75,6 +133,18 @@ figure;
 imagesc(rhoVal); colorbar; clim([0 0.5]);
 xticks(1:6); yticks(1:3);
 xticklabels(bandLabels); yticklabels(timeLabels);
+
+%% Cortical area differences
+figure;
+for iBand = 1:5
+    subplot(2,3,iBand);
+    violin([medEnvelopeCorr(ssLoc,iBand) [medEnvelopeCorr(mmLoc,iBand);NaN(5,1)] [medEnvelopeCorr(smLoc,iBand);NaN(6,1)]],...
+        'bw',0.05,'edgecolor','none');
+    box off;title(bandLabels{iBand});
+     xticklabels({'S1-S1','Motor-Motor','S1-Motor'});
+    ylabel('Correlation'); ylim([-0.1 1]); yticks(0:0.2:1);
+    if iBand~=5; legend off; end 
+end
 
 %% Plot 
 for iType = 1:3
@@ -296,6 +366,7 @@ for iPlot = 1:6
     xticklabels(layerLabels); yticklabels(layerLabels);
 end
 
+
 %% Cortical area differences in correlations
 
 pairClass(singleChRow,:) = [];
@@ -330,6 +401,23 @@ for iPlot = 1:6
     xticks(1:3); xticklabels(layerLabels);
     yticks(1:3); yticklabels(areaLabels); clim([0 0.4]);
 end 
+
+% Distribution of correlations for gamma band
+allVals = [[superAllPow; superMidPairPow; superDeepPairPow]...
+    [superMidPairPow; midAllPow; midDeepPairPow] ...
+    [superDeepPairPow; midDeepPairPow; deepAllPow] ...
+      ];
+
+
+figure;
+for iBand = 1:5
+    subplot(2,3,iBand);
+    violin([allVals(repmat(ssLoc,[3 1]),iBand) [NaN(9,1); allVals(repmat(mmLoc,[3 1]),iBand)] ...
+        [NaN(18,1); allVals(repmat(smLoc,[3 1]),iBand)]],{'S1-S1','Motor-Motor','S1-Motor'},'bw',0.05,'edgecolor','none');
+    box off; ylim([-0.1 1]);
+    title(bandLabels{iBand});
+end
+sgtitle('Pooling correlations between compartments'); 
 
 %% Group the data across animals and also for an individual animal 
 for iM = 3%1:3
@@ -419,11 +507,11 @@ for iM = 3%1:3
         intraA = [allMonkeyVars(1).intraCorrAR; allMonkeyVars(2).intraCorrAR];
         intraB = [allMonkeyVars(1).intraCorrBR; allMonkeyVars(2).intraCorrBR];
 
-        % envelopeIntraA = [allMonkeyVars(1).envelopeIntraAAllR; allMonkeyVars(2).envelopeIntraAAllR];
-        % envelopeIntraB = [allMonkeyVars(1).envelopeIntraBAllR; allMonkeyVars(2).envelopeIntraBAllR];
+        envelopeIntraA = [allMonkeyVars(1).envelopeIntraAAllR; allMonkeyVars(2).envelopeIntraAAllR];
+        envelopeIntraB = [allMonkeyVars(1).envelopeIntraBAllR; allMonkeyVars(2).envelopeIntraBAllR];
 
-        % infraIntraA = [allMonkeyVars(1).infraIntraAAllR;allMonkeyVars(2).infraIntraAAllR];
-        % infraIntraB = [allMonkeyVars(1).infraIntraBAllR;allMonkeyVars(2).infraIntraBAllR];
+        infraIntraA = [allMonkeyVars(1).infraIntraAAllR;allMonkeyVars(2).infraIntraAAllR];
+        infraIntraB = [allMonkeyVars(1).infraIntraBAllR;allMonkeyVars(2).infraIntraBAllR];
 
         smLoc = sum(pairClass=='SM',2)==2;
         ssLoc = sum(pairClass=='SS',2)==2;
@@ -461,9 +549,9 @@ for iM = 3%1:3
 
     % Plot the average correlations
     figure;
-    subplot(131); boxplot([avgIntraA;avgIntraB],bandLabels); title('Within probe -time');box off; axis square; ylim([-0.05 0.5]);
-    subplot(132); boxplot([avgEnvA; avgEnvB],bandLabels);    title('Within probe - power');box off; axis square; ylim([-0.05  0.5]);
-    subplot(133); boxplot([avgInfraA; avgInfraB],bandLabels); title('Within probe - infraslow');box off; axis square; ylim([-0.05  0.5]);
+    subplot(131); boxplot([avgIntraA(:,1:5);avgIntraB(:,1:5)],bandLabels(:,1:5)); title('Within probe -time');box off; axis square; ylim([-0.05 0.5]);
+    subplot(132); boxplot([avgEnvA(:,1:5); avgEnvB(:,1:5)],bandLabels(:,1:5));    title('Within probe - power');box off; axis square; ylim([-0.05  0.5]);
+    subplot(133); boxplot([avgInfraA(:,1:5); avgInfraB(:,1:5)],bandLabels(:,1:5)); title('Within probe - infraslow');box off; axis square; ylim([-0.05  0.5]);
 
     % Get the correlations corresponding to inter-laminar distance
 
@@ -502,32 +590,35 @@ for iM = 3%1:3
     infraDistB = permute(reshape(permute(cat(3, infraDistB{:}), [3 1 2]), ...
         matSize(1), matSize(2), chSize), [1 3 2]);
 
-    % Plot each type separately
-    for iType = 1:3
-        switch iType
-            case 1
-                vars = [intraDistA;intraDistB];
-                typeLabel = 'Time series';
-            case 2
-                vars = [envDistA; envDistB];
-                typeLabel = 'Power';
-            case 3
-                vars = [infraDistA; infraDistB];
-                typeLabel = 'Infra-slow ';
-        end
+    
+    figure; 
+    for iBand = 1:5
+        subplot(2,3,iBand);
+        for iPlot = 1:3
+            switch iPlot
+                case 1
+                    vars = [intraDistA;intraDistB];
+                    colorVal = 'blue';
+                case 2
+                    vars = [envDistA; envDistB];
+                    colorVal = 'red';
+                case 3
+                    vars = [infraDistA; infraDistB];
+                    colorVal = 'yellow';
+            end
 
-        figure;
-        for iBand = 1:5
-            subplot(2,3,iBand);
-            % boxplot(squeeze(vars(:,:,iBand)));
             medVal = median(squeeze(vars(:,:,iBand)),1,'omitnan');
             sem    = mad(squeeze(vars(:,:,iBand)),1)./sqrt(size(vars,2));
-            plot(1:20, medVal); hold on;
+            h(iPlot) = plot(1:20, medVal); hold on;
             patch([(1:20) fliplr(1:20)], [medVal-2*sem, fliplr(medVal+2*sem)], ...
-                'blue', 'FaceAlpha', 0.3, 'EdgeColor', 'none');        title([bandLabels{iBand}]);
-            xlabel('Distance (x100 um)'); box off; axis square;
-            ylim([-0.2 1]);
-            sgtitle(typeLabel);
+               colorVal, 'FaceAlpha', 0.3, 'EdgeColor', 'none');
+        end
+
+        title([bandLabels{iBand}]);
+        xlabel('Distance (x100 um)'); box off; axis square;
+        ylim([-0.2 1]);
+        if iBand ==5
+            legend(h,'Time series','Power','Infraslow','Location','northeast');
         end
     end
   
@@ -599,6 +690,8 @@ for iM = 3%1:3
         end
     end
 end
+
+
 
 %% Coherence for all frequencies
 allCohRec = [allMonkeyVars.allCohRec]; % Coherence for all frequencies
