@@ -26,7 +26,7 @@ binSize   = 5;
 
 % Check if certain variables are stored....
 if exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVarsBinned.mat'],'file')
-    varInfo = who('-file',['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVarsBinned.mat']);
+    varInfo = who('-file',['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVars.mat']);
     varIdx  = ismember('infraIntraAAllR',varInfo) & ismember('meanSpecValsAR',varInfo);
 else
     varIdx = 1;
@@ -244,6 +244,8 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVarsBi
                 % meanPairCorr(iDate,iRun,iBand) = mean(corr(xA,xB),'all','omitnan'); % Mean pairwise correlation
                 medPairCorr(iDate,iRun,iBand)  = corr(median(xA,2,'omitnan'),median(xB,2,'omitnan')); % Median pairwise correlation
 
+                % medPairCorr(iDate,iRun,iBand)  =  median(corr(xA,xB),'all','omitnan'); % Median pairwise correlation
+
                 % Within probe correlations - Envelope/Power
                 envelopeIntraCorrA(iDate,iRun,iBand)  = median(nonzeros(tril(corr(envelopeABandLimited,'rows','complete'))),'all','omitnan');
                 envelopeIntraCorrB(iDate,iRun,iBand)  = median(nonzeros(tril(corr(envelopeBBandLimited,'rows','complete'))),'all','omitnan');
@@ -253,6 +255,7 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVarsBi
 
                 % Correlate instantaneous band power between electrodes
                 medCorrEnvelope(iDate,iRun,iBand)  =  corr(median(envelopeABandLimited,2,'omitnan'),median(envelopeBBandLimited,2,'omitnan'));
+                % medCorrEnvelope(iDate,iRun,iBand)  =  median(corr(envelopeABandLimited,envelopeBBandLimited),'all','omitnan');
 
 
                 % Within probe correlations - Infraslow
@@ -265,7 +268,7 @@ if ~exist(['D:\Data\' monkeyName '_SqM\' hemisphere ' Hemisphere\DualProbeVarsBi
                 % Correlate infraslow flucutuations in instantaneous band
                 % power between electrodes
                 medCorrInfraSlow(iDate,iRun,iBand)  =  corr(median(infraSlowA,2,'omitnan'),median(infraSlowB,2,'omitnan'));
-
+                % medCorrInfraSlow(iDate,iRun,iBand)  =   median(corr(infraSlowA,infraSlowB),'all','omitnan');
 
                 % Split the data into superficial, middle or deep for both
                 % electrodes

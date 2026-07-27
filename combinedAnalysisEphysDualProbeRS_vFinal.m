@@ -1,6 +1,12 @@
 %% combinedAnalysisEphysDualProbeRS_vFinal
 % Combined analysis for both animals
 % Keerthana Manikandan
+% DualProbeVarsBinned.mat - spatiotemporal binning done for correlations
+% between electrodes; use this file to extract within electrode correlation
+% DualProbeVars.mat - no spatiotemporal binning done here; within electrode
+% correlations are not binned here
+% Use the binned version for all calculations except for showing
+% distributions of within versus between electrode correlations
 
 commonDir = 'C:\Users\kem294\Documents\Data';
 cd(commonDir);
@@ -21,7 +27,7 @@ areaLabels  = {'S-S','M-M','S-M'};
 hemisphere  = 'Left';
 
 for iM = 1:2
-    allMonkeyVars(iM) =  load(['D:\Data\' monkeys{iM} '_SqM\Left Hemisphere\DualProbeVarsBinned.mat']);
+    allMonkeyVars(iM) =  load(['D:\Data\' monkeys{iM} '_SqM\Left Hemisphere\DualProbeVars.mat']);
 end
 
 connVals = [allMonkeyVars(1).connValsR; allMonkeyVars(2).connValsR];
@@ -42,23 +48,111 @@ envelopeIntraB = [allMonkeyVars(1).envelopeIntraBAllR; allMonkeyVars(2).envelope
 infraIntraA = [allMonkeyVars(1).infraIntraAAllR;allMonkeyVars(2).infraIntraAAllR];
 infraIntraB = [allMonkeyVars(1).infraIntraBAllR;allMonkeyVars(2).infraIntraBAllR];
 
-avgIntraA = cell2mat(cellfun(@(x) mean(tril(x,-1),"all",'omitnan'),intraA,'UniformOutput',0));
-avgIntraB = cell2mat(cellfun(@(x) mean(tril(x,-1),"all",'omitnan'),intraB,'UniformOutput',0));
+singleChRow = [cellfun(@(x) isscalar(x),allMonkeyVars(1).intraCorrBR(:,1));...
+    cellfun(@(x) isscalar(x),allMonkeyVars(2).intraCorrBR(:,1))];
 
-avgEnvA = cell2mat(cellfun(@(x) mean(tril(x,-1),"all",'omitnan'),envelopeIntraA,'UniformOutput',0));
-avgEnvB = cell2mat(cellfun(@(x) mean(tril(x,-1),"all",'omitnan'),envelopeIntraB,'UniformOutput',0));
+avgIntraA = cell2mat(cellfun(@(x) median(nonzeros(tril(x,-1)),'all','omitnan'),intraA,'UniformOutput',0));
+avgIntraB = cell2mat(cellfun(@(x) median(nonzeros(tril(x,-1)),'all','omitnan'),intraB,'UniformOutput',0));
 
-avgInfraA = cell2mat(cellfun(@(x) mean(tril(x,-1),"all",'omitnan'),infraIntraA,'UniformOutput',0));
-avgInfraB = cell2mat(cellfun(@(x) mean(tril(x,-1),"all",'omitnan'),infraIntraB,'UniformOutput',0));
+avgEnvA = cell2mat(cellfun(@(x) median(nonzeros(tril(x,-1)),'all','omitnan'),envelopeIntraA,'UniformOutput',0));
+avgEnvB = cell2mat(cellfun(@(x) median(nonzeros(tril(x,-1)),'all','omitnan'),envelopeIntraB,'UniformOutput',0));
 
+avgInfraA = cell2mat(cellfun(@(x) median(nonzeros(tril(x,-1)),'all','omitnan'),infraIntraA,'UniformOutput',0));
+avgInfraB = cell2mat(cellfun(@(x) median(nonzeros(tril(x,-1)),'all','omitnan'),infraIntraB,'UniformOutput',0));
 
-% Get cortical areas of the pairs
+avgIntraA(singleChRow,:) = []; avgIntraB(singleChRow,:) = []; 
+avgEnvA(singleChRow,:) = [];   avgEnvB(singleChRow,:)   = []; 
+avgInfraA(singleChRow,:) = []; avgInfraB(singleChRow,:) = []; 
+
+% % Get cortical areas of the pairs
 pairClass = [allMonkeyVars(1).pairClass; allMonkeyVars(2).pairClass];
 smLoc = sum(pairClass=='SM',2)==2;
 ssLoc = sum(pairClass=='SS',2)==2;
 mmLoc = sum(pairClass=='MM',2)==2;
 
+% % Setting up data for SPSS
+% data = {(avgIntraA+avgIntraB)./2 (avgEnvA+avgEnvB)./2 (avgInfraA+avgInfraB)./2 ...
+%     medPairCorr medEnvelopeCorr medInfraSlowCorr};
+% corrLevels = [1 1 1 2 2 2];
+% timeLevels = [1 2 3 1 2 3];
+% 
+% 
+% nFreq = 5;
+% 
+% longDV = [];
+% longCorr = [];
+% longTime = [];
+% longFreq = [];
+% 
+% for c = 1:numel(data)
+%     nRec = size(data{c}, 1);
+%     for f = 1:nFreq
+%         longDV   = [longDV; data{c}(:,f)];
+%         longCorr = [longCorr; repmat(corrLevels(c), nRec, 1)];
+%         longTime = [longTime; repmat(timeLevels(c), nRec, 1)];
+%         longFreq = [longFreq; repmat(f, nRec, 1)];
+%     end
+% end
+% 
+% longData = [longDV longCorr longTime longFreq];
+% longDataZ = longData;
+% longDataZ(:,1)= atanh(longData(:,1)); 
+% 
+% % longData columns: DV, corrType, timescale, frequency
+% [G, ~, ~, ~] = findgroups(longData(:,2), longData(:,3), longData(:,4));
+% cellVar = splitapply(@var, longData(:,1), G);   % variance per unique cell
+% weight = 1 ./ cellVar(G);                        % inverse variance per row
+% 
+% longData_weighted = [longData, weight];
+% 
+% % Columns: DV, corrType, timescale, frequency, weight
+% 
+% % data = {(avgIntraA+avgIntraB)./2, (avgEnvA+avgEnvB)./2, (avgInfraA+avgInfraB)./2, ...
+% %         medPairCorr, medEnvelopeCorr, medInfraSlowCorr};
+% % 
+% % nRec = 120;
+% % nFreq = 5;
+% % nCond = numel(data); % 6 (corrType x timescale)
+% % 
+% % wideData = zeros(nRec, nCond*nFreq);
+% % 
+% % col = 1;
+% % for c = 1:nCond
+% %     wideData(:, col:col+nFreq-1) = data{c};
+% %     col = col + nFreq;
+% % end
+% 
+% data = {(avgIntraA+avgIntraB)./2, (avgEnvA+avgEnvB)./2, (avgInfraA+avgInfraB)./2, ...
+%         medPairCorr, medEnvelopeCorr, medInfraSlowCorr};
+% 
+% % Remove Spk (column 4) from each variable before reshaping
+% freqKeep = 1:4;   % Alpha, Beta, Gamma, Theta (Spk excluded)
+% data = cellfun(@(x) x(:, freqKeep), data, 'UniformOutput', false);
+% 
+% corrLevels = [1 1 1 2 2 2];   % 1 = Within, 2 = Between
+% timeLevels = [1 2 3 1 2 3];   % 1 = Time, 2 = Envelope, 3 = Infraslow
+% nFreq = 4;                     % now only 4 frequencies
+% 
+% longDV = [];
+% longCorr = [];
+% longTime = [];
+% longFreq = [];
+% 
+% for c = 1:numel(data)
+%     nRec = size(data{c}, 1);
+%     for f = 1:nFreq
+%         longDV   = [longDV; data{c}(:,f)];
+%         longCorr = [longCorr; repmat(corrLevels(c), nRec, 1)];
+%         longTime = [longTime; repmat(timeLevels(c), nRec, 1)];
+%         longFreq = [longFreq; repmat(f, nRec, 1)];   % now coded 1-4
+%     end
+% end
+% 
+% longData = [longDV, longCorr, longTime, longFreq];
+% % Columns: DV, corrType, timescale, frequency (1=Alpha, 2=Beta, 3=Gamma, 4=Theta)
+
 %% Plot distributions of correlations as a heatmap 
+clear wthnAll btwAll
 figure; idx = 1; 
 for iType = 1:3
     clear wthn btw
@@ -74,16 +168,37 @@ for iType = 1:3
             btw  = medInfraSlowCorr;
     end
 
+    btw(singleChRow,:) = [];
+
     wthnAll(iType,:) = median(wthn,1,'omitnan');
     btwAll(iType,:) = median(btw,1,'omitnan');
 
     % Plot the distributions of correlations for the timescales
-    subplot(2,3,idx); boxplot(wthn(:,1:5),bandLabels(:,1:5)); ylim([-0.4 1]); yticks(-0.4:0.2:1);
-    title(['Within electode: ' timeLabels{iType}]); box off; 
+    subplot(2,3,idx); 
+    % boxplot(wthn(:,1:5),bandLabels(:,1:5));
+    % violin(wthn(:,1:5),'bw',0.035 );if iType~=3; legend off; end 
+    boxplot(wthn(:,1:5),bandLabels(:,1:5));
+    xticks(1:5);xticklabels(bandLabels); hold on;
+    swarmchart(repmat(1:5, size(wthn,1), 1), wthn(:,1:5),5,'blue','filled','XJitterWidth',0.25);
 
-    subplot(2,3,idx+3); boxplot(btw(:,1:5),bandLabels(:,1:5)); ylim([-0.4 1]);
+    ylim([-0.4 1]); yticks(-0.4:0.2:1);
+    title(['Within electode: ' timeLabels{iType}]); box off;
+
+    subplot(2,3,idx+3); 
+    boxplot(btw(:,1:5),bandLabels(:,1:5)); 
+    % violin(btw(:,1:5),'bw',0.035); xticks(1:5); if iType~=3; legend off; end 
+    % boxplot(btw(:,1:5),bandLabels(:,1:5)); 
+    xticklabels(bandLabels); hold on;
+    swarmchart(repmat(1:5, size(btw,1), 1), btw(:,1:5),5,'blue','filled','XJitterWidth',0.5);
+    ylim([-0.4 1]);yticks(-0.4:0.2:1); 
     title(['Between electodes: ' timeLabels{iType}]); box off;  
-    idx = idx+1;
+    idx = idx+1; 
+
+    [pW(iType),tW{iType},statsW{iType}] = anova1(wthn(:,1:5),bandLabels(:,1:5),'off');
+    [cW{iType},~,~,~] = multcompare(statsW{iType},'Alpha',0.005,'Display','off');
+
+    [pB(iType),tB{iType},statsB{iType}] = anova1(btw(:,1:5),bandLabels(:,1:5),'off');
+    [cB{iType},~,~,~] = multcompare(statsB{iType},'Alpha',0.005,'Display','off');
 
 end
 
@@ -96,7 +211,6 @@ title('Within electrode correlations');
 subplot(122); imagesc(btwAll(:,1:5)); xticks(1:5); yticks(1:3); axis square;
 xticklabels(bandLabels); yticklabels(timeLabels); colorbar;clim([0 0.6]);
 title('Between electrode correlations');
-
 
 %% Pairwise correlations vs FC 
 showScatterPlots(connVals,medPairCorr,medEnvelopeCorr,medInfraSlowCorr,...
